@@ -14,12 +14,14 @@ import numpy as np
 import itertools
 
 from numpy.linalg import inv
+from numpy.linalg import pinv
+
 
 import make_convoluted_data
 
 from sklearn.decomposition import PCA
 from sklearn.decomposition import NMF
-from sklearn.decomposition import fastica
+from sklearn.decomposition import FastICA
 
 import multiprocessing as mp
 
@@ -141,7 +143,6 @@ def select_w(X, possible_Ws, TZ):
 	return np.reshape(np.array(W), (len(W),len(W[0]))) 
 
 
-
 def doWork(samp_index):
 
 	#print 'Doing sample ' + str(samp_index)
@@ -159,16 +160,17 @@ def doWork(samp_index):
 			best_perm = np.array(perm)
 
 	return best_perm
-
 	
 
 def select_w_parallel():
 
 	try:
 
-		samp_indexes = [i for i in range(len(possible_Ws))]
-		numb_cpus = mp.cpu_count() - 4
-		pool = mp.Pool(processes=numb_cpus)
+		#samp_indexes = [i for i in range(len(possible_Ws))]
+		samp_indexes = range(len(possible_Ws))
+		numb_cpus = mp.cpu_count()
+		#print 'numb of cpus' + str(numb_cpus)
+		pool = mp.Pool()
 
 		W = pool.map(doWork, samp_indexes)
 
@@ -194,7 +196,13 @@ if __name__ == "__main__":
 	#numb_feats = len(real_data[0])
 	numb_samps = 50
 	numb_feats = 10000
-	numb_subpops = 5
+	
+	#this is the number of profiles that exist in the simulated data
+	numb_subpops = 4
+	#this is the number of components that are kept in pca
+	numb_model_subpops= 5
+
+
 	samps, freqs, subpops = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
 
 	global X
@@ -204,16 +212,10 @@ if __name__ == "__main__":
 	print 'freqs shape ' + str(freqs.shape)
 	print 'subpops shape ' + str(subpops.shape)
 
-	numb_model_subpops= 5
-	pca = PCA(n_components=numb_model_subpops)
-	pca.fit(samps.T)
-	#print(pca.explained_variance_ratio_)
-
-
-
 	#########################################################
 	#make all frequencies have same number of entries
 	new_freqs = []
+	#for each sample
 	for j in range(len(freqs)):
 		freq = list(freqs[j])
 		#if less than number of model, add zeros
@@ -221,21 +223,58 @@ if __name__ == "__main__":
 			freq.append(0.0)
 		#if  more than number of model,then take largest
 		if len(freq) > numb_model_subpops:
-			sorted_freq = sorted(freq, reverse=True)
+			freq = sorted(freq, reverse=True)
 			while len(freq) > numb_model_subpops:
 				freq.pop(len(freq) - 1)
-			#scale so sums to 1
-			freq_sum = sum(freq)
+		#scale so sums to 1
+		freq_sum = sum(freq)
+		if freq_sum != 1.0:
 			for i in range(len(freq)):
 				freq[i] = freq[i] / float(freq_sum)
+		np.random.shuffle(freq)
 		new_freqs.append(freq)
 
-	freqs = np.array(new_freqs)
-	print 'new_freqs shape ' + str(freqs.shape)
+	new_freqs = np.array(new_freqs)
+	print 'new_freqs shape ' + str(new_freqs.shape)
+	#########################################################
+
+	#########################################################
+	#make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
+	start_freqs = []
+	#for each sample
+	for j in range(len(freqs)):
+		freq = list(freqs[j])
+		#if less than number of model, add zeros
+		while len(freq) < numb_model_subpops:
+			freq.append(0.0)
+		#if  more than number of model,then take largest
+		if len(freq) > numb_model_subpops:
+			freq = sorted(freq, reverse=True)
+			while len(freq) > numb_model_subpops:
+				freq.pop(len(freq) - 1)
+		#scale so sums to 1
+		freq_sum = sum(freq)
+		if freq_sum != 1.0:
+			for i in range(len(freq)):
+				freq[i] = freq[i] / float(freq_sum)
+		#np.random.shuffle(freq)
+		start_freqs.append(freq)
+
+	start_freqs = np.array(start_freqs)
+	print 'start_freqs shape ' + str(start_freqs.shape)
 	#########################################################
 
 
+	#########################################################
+	#Initializing model
+
+	#pca = PCA(n_components=numb_model_subpops)
+	pca = FastICA(n_components=numb_model_subpops)
+	pca.fit(samps.T)
+	#print 'Variance explained ' + str(pca.explained_variance_ratio_)
+
 	Z = pca.transform(samps.T).T
+	#Z = np.random.rand(len(Z), len(Z[0]))
 	print 'Z shape ' + str(Z.shape)
 
 	T = np.identity(len(Z))
@@ -244,17 +283,19 @@ if __name__ == "__main__":
 	TZ = np.dot(T, Z)
 	print 'TZ shape ' + str(TZ.shape)
 
-	X_hat = np.dot(freqs, TZ)
+	X_hat = np.dot(new_freqs, TZ)
 	print 'X_hat shape ' + str(X_hat.shape)
 	norm = np.linalg.norm(samps - X_hat)
 	print 'Initial norm ' + str(norm)
 
 	print 'Finding all weight permutations..'
 	global possible_Ws
-	possible_Ws = get_possible_Ws(freqs)
+	possible_Ws = get_possible_Ws(new_freqs)
 	print 'Completed.'
+	#########################################################
 
 
+	#########################################################
 	print 'Optimizing model..'
 
 	for i in range(20):
@@ -266,59 +307,36 @@ if __name__ == "__main__":
 		W = select_w_parallel()
 		X_hat = np.dot(W, TZ)
 		norm = np.linalg.norm(X - X_hat)
-		print '         Norm ' + str(norm)
+		print '         	Norm ' + str(norm)
+
 
 		print 'optimizig TZ'
-		TZ = np.dot(inv(np.dot(W.T,W)), np.dot(W.T, X))
+		TZ = np.dot(pinv(np.dot(W.T,W)), np.dot(W.T, X))
 		new_X_hat = np.dot(W, TZ)
 		new_norm = np.linalg.norm(X - new_X_hat)
-		print '         Norm ' + str(new_norm)
+		print '         	Norm ' + str(new_norm)
 
 		if norm == new_norm:
 			break
+	#########################################################
 
-	print 
+	print
+
+	######################################################### 
 	#figure out how close the model components are to the actual profiles
 	#and match the components to their profiles so printing makes sense
 	# so for each actual profile, find the row of TZ that is most similar to it
-
-	'''
-	#this list keeps track of which profile correspond to which compoents
-	#also this list is so that I dont assign a profiles to the same components
-	component_order = []
-	for profile_index in range(len(subpops)):
-
-		#what happens when # subpops != #components??
-		best_norm = -1
-		best_component = -1
-
-		for component_index in range(len(TZ)):
-
-			if component_index in component_order:
-				continue
-
-			norm = np.linalg.norm(subpops[profile_index] - TZ[component_index])
-			if norm < best_norm or best_norm == -1:
-				best_norm = norm
-				best_component = component_index
-
-
-		component_order.append(best_component)
-
-		#print how close each component is to each matching profile
-		print 'Profile ' + str(profile_index) + ' norm ' + str(best_norm)
-	'''
-
-	#that is one way of doing it but I dont think its optimal
-	#a better way is too find all permutations and pick the one that minizes the sum of norms
 	possible_component_order = list(set(itertools.permutations(range(len(TZ)))))
 	best_norm_sum = -1
 	best_order = -1
+	#for each possible ordering of the components
 	for i in range(len(possible_component_order)):
-
+		#keep track of the sum of the norms
 		norm_sum = 0
+		#for each profile 
 		for profile_index in range(len(subpops)):
-
+			#add to the norm sum
+			#the norm of the difference betweem the profile and the corresponding component given this order
 			norm_sum += np.linalg.norm(subpops[profile_index] - TZ[possible_component_order[i][profile_index]])
 
 		if norm_sum < best_norm_sum or best_norm_sum == -1:
@@ -326,33 +344,41 @@ if __name__ == "__main__":
 			best_order = i
 
 	component_order = possible_component_order[best_order]
+	#########################################################
 
-	print 
+	print
+
+	#########################################################
 	#print how close each component is to each matching profile
 	for profile_index in range(len(subpops)):
 
 		print 'Profile ' + str(profile_index) + ' norm ' + str(np.linalg.norm(subpops[profile_index] - TZ[component_order[profile_index]]))
+	#########################################################
 
+	print 
 
-
-
+	#########################################################
 	#print actual frequencies of samples and predicted assignment of frequencies
 	print 'Actual - Predicted'
 	for i in range(len(freqs)):
+		#only print first 10
+		if i > 9:
+			break
+		print str(['%.2f' % elem for elem in start_freqs[i]]) + '  ' + str(['%.2f' % elem for elem in [W[i][x] for x in component_order]])
+	#########################################################
 
-		#print str(freqs[i]) + '  ' + str(W[i])
-		#print str(freqs[i]) + '  ' + str([W[i][x] for x in component_order])
 
-		#print("%.2f" % a)
-		#myFormattedList = [ '%.2f' % elem for elem in myList ]
+	#########################################################
+	#print average norm of assigned frequencies vs actual
+	sum1 = 0
+	for i in range(len(freqs)):
+		dif_array = start_freqs[i] - [W[i][x] for x in component_order]
+		sum1 += np.linalg.norm(dif_array)
+	print 'Average freq assignemtn norm ' + str(sum1)
+	#########################################################
 
-		print str(['%.2f' % elem for elem in freqs[i]]) + '  ' + str(['%.2f' % elem for elem in [W[i][x] for x in component_order]])
 
-	#print freqs
-
-	#print W
-
-	print 'DONE'
+	print '\nDONE'
 
 
 
