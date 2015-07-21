@@ -71,6 +71,8 @@ def make_samps(numb_samps, subpops, freqs):
 	noise = np.random.rand(numb_samps, len(subpops[0])) / 100.0
 	samps = samps + noise
 	#need to make sure that no cell is negative
+	#cant be negative cuz the random is from 0 to 1 not -1 to 1
+	#so could remove this
 	for i in range(len(samps)):
 		for j in range(len(samps[0])):
 			if samps[i][j] < 0.0:
