@@ -12,20 +12,12 @@ import make_convoluted_data
 
 import numpy as np
 
-from numpy.linalg import inv
-from numpy.linalg import pinv
-
 import itertools
-
-from sklearn.decomposition import PCA
-from sklearn.decomposition import NMF
-from sklearn.decomposition import FastICA
-
-import multiprocessing as mp
 
 import plot_bar_chart as pbc
 import read_TCGA_gene_data as rtgd
 import weight_tools as wt
+import model_tools as mt
 
 
 
@@ -99,85 +91,14 @@ def main():
 				global X
 				X = samps
 
-				#print 'samps shape ' + str(samps.shape)
-				#print 'freqs shape ' + str(freqs.shape)
-				#print 'subpops shape ' + str(subpops.shape)
-				#########################################################
-
-				#########################################################
 				#make all frequencies have same number of entries
-				new_freqs = []
-				#for each sample
-				for j in range(len(freqs)):
-					freq = list(freqs[j])
-					#if less than number of model, add zeros
-					while len(freq) < numb_model_subpops:
-						freq.append(0.0)
-					#if  more than number of model,then take largest
-					if len(freq) > numb_model_subpops:
-						freq = sorted(freq, reverse=True)
-						while len(freq) > numb_model_subpops:
-							freq.pop(len(freq) - 1)
-					#scale so sums to 1
-					freq_sum = sum(freq)
-					if freq_sum != 1.0:
-						for i in range(len(freq)):
-							freq[i] = freq[i] / float(freq_sum)
-					np.random.shuffle(freq)
-					new_freqs.append(freq)
-
-				new_freqs = np.array(new_freqs)
-				#print 'new_freqs shape ' + str(new_freqs.shape)
-				#########################################################
-
-				#########################################################
+				new_freqs = wt.same_numb_of_entries(numb_model_subpops, freqs)
 				#make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
-				start_freqs = []
-				#for each sample
-				for j in range(len(freqs)):
-					freq = list(freqs[j])
-					#if less than number of model, add zeros
-					while len(freq) < numb_model_subpops:
-						freq.append(0.0)
-					#if  more than number of model,then take largest
-					if len(freq) > numb_model_subpops:
-						freq = sorted(freq, reverse=True)
-						while len(freq) > numb_model_subpops:
-							freq.pop(len(freq) - 1)
-					#scale so sums to 1
-					freq_sum = sum(freq)
-					if freq_sum != 1.0:
-						for i in range(len(freq)):
-							freq[i] = freq[i] / float(freq_sum)
-					#np.random.shuffle(freq)
-					start_freqs.append(freq)
-
-				start_freqs = np.array(start_freqs)
-				#print 'start_freqs shape ' + str(start_freqs.shape)
-				#########################################################
-
+				start_freqs = wt.same_numb_of_entries_no_shuffle(numb_model_subpops, freqs)
 
 				#########################################################
 				#Initializing model
-
-				if init_type == 0:
-					Z = np.random.rand(numb_model_subpops, len(samps[0]))
-				elif init_type == 1:
-					pca = PCA(n_components=numb_model_subpops)
-					pca.fit(samps.T)
-					Z = pca.transform(samps.T).T
-				else:
-					pca = FastICA(n_components=numb_model_subpops)
-					pca.fit(samps.T)
-					Z = pca.transform(samps.T).T		
-
-				#print 'Z shape ' + str(Z.shape)
-
-				T = np.identity(len(Z))
-				#print 'T shape ' + str(T.shape)
-
-				TZ = np.dot(T, Z)
-				#print 'TZ shape ' + str(TZ.shape)
+				TZ = mt.init_model(init_type, numb_model_subpops, samps)
 
 				X_hat = np.dot(new_freqs, TZ)
 				#print 'X_hat shape ' + str(X_hat.shape)
@@ -186,37 +107,15 @@ def main():
 
 				#print 'Finding all weight permutations..'
 				global possible_Ws
-				possible_Ws = get_possible_Ws(new_freqs)
+				possible_Ws = wt.get_possible_Ws(new_freqs)
 				#print 'Completed.'
 				#########################################################
 
 
 				#########################################################
 				print 'Optimizing model..'
+				W, TZ = mt.optimize_model(possible_Ws, TZ)
 
-				for i in range(50):
-
-					#print 'Iter ' + str(i)
-
-					#print 'selecting W'
-					#W = select_w(X, possible_Ws, TZ)
-					W = wt.select_w_parallel()
-					X_hat = np.dot(W, TZ)
-					norm = np.linalg.norm(X - X_hat)
-					#print '         	Norm ' + str(norm)
-
-
-					#print 'optimizig TZ'
-					TZ = np.dot(pinv(np.dot(W.T,W)), np.dot(W.T, X))
-					new_X_hat = np.dot(W, TZ)
-					new_norm = np.linalg.norm(X - new_X_hat)
-					#print '         	Norm ' + str(new_norm)
-
-					if norm == new_norm:
-						break
-				#########################################################
-
-				#print
 
 				######################################################### 
 				# match the components to their profiles so printing makes sense

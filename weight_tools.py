@@ -2,6 +2,8 @@
 import numpy as np
 import itertools
 
+import multiprocessing as mp
+
 
 def get_possible_Ws(freqs):
 	'''
@@ -100,7 +102,7 @@ def select_w(X, possible_Ws, TZ):
 
 
 
-def select_w_parallel():
+def select_w_parallel(possible_Ws):
 	'''
 	Same as select_w but this function used the multiple cores
 	'''
@@ -113,7 +115,7 @@ def select_w_parallel():
 		#print 'numb of cpus' + str(numb_cpus)
 		pool = mp.Pool()
 
-		W = pool.map(doWork, samp_indexes)
+		W = pool.map_async(doWork, samp_indexes).get(99999)
 		#print 'W ' + str(len(W)) + ' ' + str(len(W[0]))
 
 	except KeyboardInterrupt:
@@ -147,3 +149,69 @@ def doWork(samp_index):
 			best_perm = np.array(perm)
 
 	return best_perm
+
+
+
+
+
+def same_numb_of_entries(numb_model_subpops, freqs):
+	'''
+	make all frequencies have same number of entries
+	'''
+
+	new_freqs = []
+	#for each sample
+	for j in range(len(freqs)):
+		freq = list(freqs[j])
+		#if less than number of model, add zeros
+		while len(freq) < numb_model_subpops:
+			freq.append(0.0)
+		#if  more than number of model,then take largest
+		if len(freq) > numb_model_subpops:
+			freq = sorted(freq, reverse=True)
+			while len(freq) > numb_model_subpops:
+				freq.pop(len(freq) - 1)
+		#scale so sums to 1
+		freq_sum = sum(freq)
+		if freq_sum != 1.0:
+			for i in range(len(freq)):
+				freq[i] = freq[i] / float(freq_sum)
+		np.random.shuffle(freq)
+		new_freqs.append(freq)
+
+	new_freqs = np.array(new_freqs)
+	#print 'new_freqs shape ' + str(new_freqs.shape)
+
+	return new_freqs
+
+
+
+def same_numb_of_entries_no_shuffle(numb_model_subpops, freqs):
+	'''
+	Make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
+	'''
+
+	start_freqs = []
+	#for each sample
+	for j in range(len(freqs)):
+		freq = list(freqs[j])
+		#if less than number of model, add zeros
+		while len(freq) < numb_model_subpops:
+			freq.append(0.0)
+		#if  more than number of model,then take largest
+		if len(freq) > numb_model_subpops:
+			freq = sorted(freq, reverse=True)
+			while len(freq) > numb_model_subpops:
+				freq.pop(len(freq) - 1)
+		#scale so sums to 1
+		freq_sum = sum(freq)
+		if freq_sum != 1.0:
+			for i in range(len(freq)):
+				freq[i] = freq[i] / float(freq_sum)
+		#np.random.shuffle(freq)
+		start_freqs.append(freq)
+
+	start_freqs = np.array(start_freqs)
+	#print 'start_freqs shape ' + str(start_freqs.shape)
+
+	return start_freqs
