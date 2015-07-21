@@ -107,19 +107,20 @@ def select_w_parallel(possible_Ws):
 	Same as select_w but this function used the multiple cores
 	'''
 
-	try:
 
-		#samp_indexes = [i for i in range(len(possible_Ws))]
-		samp_indexes = range(len(possible_Ws))
-		numb_cpus = mp.cpu_count()
-		#print 'numb of cpus' + str(numb_cpus)
-		pool = mp.Pool()
+	#samp_indexes = [i for i in range(len(possible_Ws))]
+	samp_indexes = range(len(possible_Ws))
+	# numb_cpus = mp.cpu_count()
+	numb_cpus = 10
+	#print 'numb of cpus' + str(numb_cpus)
+	pool = mp.Pool()
 
-		W = pool.map_async(doWork, samp_indexes).get(99999)
-		#print 'W ' + str(len(W)) + ' ' + str(len(W[0]))
-
-	except KeyboardInterrupt:
-		print 'keyboard interruption'
+	#TODO
+	#need to make sure that the order it returns is the correct order
+	W = pool.map_async(doWork, samp_indexes).get(99999)
+	pool.close()
+	pool.join()
+	#print 'W ' + str(len(W)) + ' ' + str(len(W[0]))
 
 	#print np.array(W).shape
 	#return np.reshape(np.array(W), (len(W)))
@@ -136,13 +137,15 @@ def doWork(samp_index):
 
 	#print 'Doing sample ' + str(samp_index)
 
+	import global_variables as gv
+
 	best_perm = []
 	best_norm = -1
-	for perm in possible_Ws[samp_index]:
+	for perm in gv.Ws[samp_index]:
 
 		perm1 = np.array(perm)
-		X_hat = np.dot(TZ.T, perm1)
-		norm = np.linalg.norm(X[samp_index] - X_hat)
+		X_hat = np.dot(gv.TZ.T, perm1)
+		norm = np.linalg.norm(gv.X[samp_index] - X_hat)
 
 		if norm < best_norm or best_norm == -1:
 			best_norm = norm

@@ -19,12 +19,14 @@ import read_TCGA_gene_data as rtgd
 import weight_tools as wt
 import model_tools as mt
 
-
+import global_variables as gv
 
 def main():
 
 	#PARAMETERS
 	plot_file_name = 'xxxx'
+	numb_samps = 50
+	numb_feats = 10000
 
 
 
@@ -42,25 +44,11 @@ def main():
 		means_for_these_components = []
 		stds_for_these_components = []
 
-		#########################################################
-		#Define data and subpops
-
-		#real_data = read_data_folder()
-
-		#numb_samps = len(real_data)
-		#numb_feats = len(real_data[0])
-		numb_samps = 50
-		numb_feats = 10000
-
 		#this is the number of profiles that exist in the simulated data
 		numb_subpops = numb_components
 		#this is the number of components that are kept in pca
 		numb_model_subpops = numb_components
-		#########################################################
-
-
-
-		#########################################################
+		
 		#Evaluating the different Z initializations
 		# 1) Random 2) PCA 3) ICA
 		#types = ['Random', 'PCA', 'ICA']
@@ -88,8 +76,9 @@ def main():
 				#params: #subpops, #feats, #samps
 				samps, freqs, subpops = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
 
-				global X
+				#global X
 				X = samps
+				gv.set_X_global(X)
 
 				#make all frequencies have same number of entries
 				new_freqs = wt.same_numb_of_entries(numb_model_subpops, freqs)
@@ -97,26 +86,27 @@ def main():
 				start_freqs = wt.same_numb_of_entries_no_shuffle(numb_model_subpops, freqs)
 
 				#########################################################
-				#Initializing model
-				TZ = mt.init_model(init_type, numb_model_subpops, samps)
+				#global possible_Ws
+				possible_Ws = wt.get_possible_Ws(new_freqs)
 
-				X_hat = np.dot(new_freqs, TZ)
+				gv.set_Ws_global(possible_Ws)
+
+				#print globals()
+
+				#qwe
+
+				#Initializing model
+				TZ = mt.init_model(init_type, numb_model_subpops, X)
+				gv.set_current_TZ(TZ)
+				#print 'Optimizing model..'
+				W, TZ = mt.optimize_model(possible_Ws, TZ)
+
+				#X_hat = np.dot(new_freqs, TZ)
 				#print 'X_hat shape ' + str(X_hat.shape)
-				norm = np.linalg.norm(samps - X_hat)
+				#norm = np.linalg.norm(samps - X_hat)
 				#print 'Initial norm ' + str(norm)
 
 				#print 'Finding all weight permutations..'
-				global possible_Ws
-				possible_Ws = wt.get_possible_Ws(new_freqs)
-				#print 'Completed.'
-				#########################################################
-
-
-				#########################################################
-				print 'Optimizing model..'
-				W, TZ = mt.optimize_model(possible_Ws, TZ)
-
-
 				######################################################### 
 				# match the components to their profiles so printing makes sense
 				# so for each actual profile, find the row of TZ that is most similar to it
