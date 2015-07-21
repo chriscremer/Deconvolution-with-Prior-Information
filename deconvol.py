@@ -8,16 +8,14 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 #print sys.path
 #sys.path.insert(0,parentdir) 
 sys.path.insert(0,currentdir+'/simulated_data')
+import make_convoluted_data
 
 import numpy as np
-
-import itertools
 
 from numpy.linalg import inv
 from numpy.linalg import pinv
 
-
-import make_convoluted_data
+import itertools
 
 from sklearn.decomposition import PCA
 from sklearn.decomposition import NMF
@@ -25,199 +23,18 @@ from sklearn.decomposition import FastICA
 
 import multiprocessing as mp
 
-#to plot
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
-
-def read_data_folder():
-
-	data = []
-
-	directory = '/data1/morrislab/ccremer/TCGA_data/rnaseqv2_clinical_onlytumours_25nov2014/RNASeqV2/UNC__IlluminaHiSeq_RNASeqV2/Level_3/'
-
-	count =0
-
-	for file123 in os.listdir(directory):
-
-		if 'genes.normalized_results' in file123:
-			samp = []
-			#print file123
-			with open(directory + file123) as f2:
-				firstLine = 1
-				for line2 in f2:
-					if firstLine == 1:
-						firstLine = 0
-						continue
-					firstSplit = line2.split()
-					samp.append(firstSplit[1])
-
-			data.append(samp)
-
-			count += 1
-			#if count > 40:
-			#	break
-
-	data = np.array(data)
-	print 'real data shape ' + str(data.shape)
-
-	return data
-
-def plot_bar_chart(types, means, stds, xaxis_labels):
-
-	# the x locations for the groups
-	ind = np.arange(len(xaxis_labels))
-	# the width of the bars
-	width = 0.20
-
-	fig, ax = plt.subplots()
-	random = ax.bar(ind-width, means[0], width, color='purple', yerr=stds[0])
-	pca = ax.bar(ind, means[1], width, color='red', yerr=stds[1])
-	#ica = ax.bar(ind+width, means[2], width, color='blue', yerr=stds[2])
+import plot_bar_chart as pbc
+import read_TCGA_gene_data as rtgd
+import weight_tools as wt
 
 
 
-	# add some text for labels, title and axes ticks
-	ax.set_ylabel('Error')
-	ax.set_xlabel('Number of Components')
-	#ax.set_title('Scores by group and gender')
-	ax.set_xticks(ind+width)
-	ax.set_xticklabels(xaxis_labels)
-	#ax.legend( (random[0], pca[0], ica[0]), ('Random', 'PCA', 'ICA') )
-	ax.legend( (random[0], pca[0]), ('Random', 'PCA') )
+def main():
+
+	#PARAMETERS
+	plot_file_name = 'xxxx'
 
 
-	plt.savefig('bar_plot_different_initializations.pdf')
-	print 'Saved plot'
-
-def get_possible_Ws(freqs):
-
-	possible_Ws = []
-
-	for i in range(len(freqs)):
-
-		#find permuations and remove the duplicates
-		perms = list(set(itertools.permutations(freqs[i])))
-
-		#now find all combinations of sums of freqs (combine 2)
-		combs = list(itertools.combinations(range(len(freqs[i])), 2))
-		for j in range(len(combs)):
-			#see if this combo has any zeros
-			#if it does skip it
-			skip = 0
-			for index in combs[j]:
-				if freqs[i][index] == 0.0:
-					skip =1 
-					break
-			if skip == 1:
-				continue
-			#combine the freqencies and replace one with a zero
-			new_freq = list(freqs[i])
-			new_freq[combs[j][0]] = new_freq[combs[j][0]] + new_freq[combs[j][1]]
-			new_freq[combs[j][1]] = 0.0
-			new_perms = list(set(itertools.permutations(new_freq)))
-			perms.extend(new_perms)
-			
-		#now find all combinations of sums of freqs (combine 3)
-		combs = list(itertools.combinations(range(len(freqs[i])), 3))
-		for j in range(len(combs)):
-			#see if this combo has any zeros
-			#if it does skip it
-			skip = 0
-			for index in combs[j]:
-				if freqs[i][index] == 0.0:
-					skip =1 
-					break
-			if skip == 1:
-				continue
-			#combine the freqencies and replace one with a zero
-			new_freq = list(freqs[i])
-			new_freq[combs[j][0]] = new_freq[combs[j][0]] + new_freq[combs[j][1]] + new_freq[combs[j][2]]
-			new_freq[combs[j][1]] = 0.0
-			new_freq[combs[j][2]] = 0.0
-			new_perms = list(set(itertools.permutations(new_freq)))
-			perms.extend(new_perms)
-
-		#print len(combs)
-		#print combs
-
-		perms = list(set(perms))
-
-		possible_Ws.append(perms)
-
-	return possible_Ws
-
-
-def select_w(X, possible_Ws, TZ):
-
-	W = []
-
-	for i in range(len(possible_Ws)):
-
-		best_perm = []
-		best_norm = -1
-
-		for perm in possible_Ws[i]:
-
-			perm1 = np.array(perm)
-			X_hat = np.dot(TZ.T, perm1)
-			norm = np.linalg.norm(X[i] - X_hat)
-
-			if norm < best_norm or best_norm == -1:
-				best_norm = norm
-				best_perm = np.array(perm)
-
-		W.append(best_perm)
-
-	return np.reshape(np.array(W), (len(W),len(W[0]))) 
-
-
-def doWork(samp_index):
-
-	#print 'Doing sample ' + str(samp_index)
-
-	best_perm = []
-	best_norm = -1
-	for perm in possible_Ws[samp_index]:
-
-		perm1 = np.array(perm)
-		X_hat = np.dot(TZ.T, perm1)
-		norm = np.linalg.norm(X[samp_index] - X_hat)
-
-		if norm < best_norm or best_norm == -1:
-			best_norm = norm
-			best_perm = np.array(perm)
-
-	return best_perm
-	
-
-def select_w_parallel():
-
-	try:
-
-		#samp_indexes = [i for i in range(len(possible_Ws))]
-		samp_indexes = range(len(possible_Ws))
-		numb_cpus = mp.cpu_count()
-		#print 'numb of cpus' + str(numb_cpus)
-		pool = mp.Pool()
-
-		W = pool.map(doWork, samp_indexes)
-
-
-		#print 'W ' + str(len(W)) + ' ' + str(len(W[0]))
-
-	except KeyboardInterrupt:
-		print 'keyboard interruption'
-
-	#print np.array(W).shape
-
-	#return np.reshape(np.array(W), (len(W)))
-
-	return np.array(W)
-
-
-if __name__ == "__main__":
 
 	rand_means = []
 	pca_means = []
@@ -382,8 +199,8 @@ if __name__ == "__main__":
 					#print 'Iter ' + str(i)
 
 					#print 'selecting W'
-					W = select_w(X, possible_Ws, TZ)
-					#W = select_w_parallel()
+					#W = select_w(X, possible_Ws, TZ)
+					W = wt.select_w_parallel()
 					X_hat = np.dot(W, TZ)
 					norm = np.linalg.norm(X - X_hat)
 					#print '         	Norm ' + str(norm)
@@ -488,10 +305,18 @@ if __name__ == "__main__":
 	stds.append(rand_stds)
 	stds.append(pca_stds)
 	stds.append(ica_stds)
-	plot_bar_chart(types, means, stds, ['2', '3', '4', '5', '6'])
+	pbc.plot_bar_chart(types, means, stds, ['2', '3', '4', '5', '6'])
 
 	print '\nDONE'
 
+
+
+
+
+
+if __name__ == "__main__":
+
+	main()
 
 
 
