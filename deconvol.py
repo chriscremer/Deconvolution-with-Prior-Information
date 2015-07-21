@@ -24,7 +24,7 @@ import global_variables as gv
 def main():
 
 	#PARAMETERS
-	plot_file_name = 'xxxx'
+	plot_file_name = '../plots/bar_plot_different_initializations_test_first_x_samps_as_init.pdf'
 	numb_samps = 50
 	numb_feats = 10000
 
@@ -37,7 +37,7 @@ def main():
 	pca_stds = []
 	ica_stds = []
 
-	for numb_components in range(2, 7):
+	for numb_components in range(2, 6):
 
 		print 'Numb of Components =' + str(numb_components)
 
@@ -67,7 +67,7 @@ def main():
 			freqs_norm_store = []
 
 			#iterate x times and get average
-			for iteration in range(10):
+			for iteration in range(6):
 
 				print 'Iter ' + str(iteration)
 
@@ -88,49 +88,36 @@ def main():
 				#########################################################
 				#global possible_Ws
 				possible_Ws = wt.get_possible_Ws(new_freqs)
-
 				gv.set_Ws_global(possible_Ws)
 
-				#print globals()
 
-				#qwe
+				#try the same initilization type multiple times to prevent really bad local minimums
+				best_norm = -1
+				for try1 in range(5):
 
-				#Initializing model
-				TZ = mt.init_model(init_type, numb_model_subpops, X)
-				gv.set_current_TZ(TZ)
-				#print 'Optimizing model..'
-				W, TZ = mt.optimize_model(possible_Ws, TZ)
+					#Initializing model
+					TZ = mt.init_model(init_type, numb_model_subpops, X)
+					gv.set_current_TZ(TZ)
+					#print 'Optimizing model..'
+					W, TZ = mt.optimize_model(possible_Ws, TZ)
 
-				#X_hat = np.dot(new_freqs, TZ)
-				#print 'X_hat shape ' + str(X_hat.shape)
-				#norm = np.linalg.norm(samps - X_hat)
-				#print 'Initial norm ' + str(norm)
+					X_hat = np.dot(W, TZ)
+					#print 'X_hat shape ' + str(X_hat.shape)
+					norm = np.linalg.norm(X - X_hat)
+					#print 'Initial norm ' + str(norm)
+					if norm < best_norm or best_norm == -1:
+						best_norm = norm
+						best_W = W
+						best_TZ = TZ
+
+				W = best_W
+				TZ = best_TZ
 
 				#print 'Finding all weight permutations..'
 				######################################################### 
 				# match the components to their profiles so printing makes sense
 				# so for each actual profile, find the row of TZ that is most similar to it
-				possible_component_order = list(set(itertools.permutations(range(len(TZ)))))
-				best_norm_sum = -1
-				best_order = -1
-				#for each possible ordering of the components
-				for i in range(len(possible_component_order)):
-					#keep track of the sum of the norms
-					norm_sum = 0
-					#for each profile 
-					for profile_index in range(len(subpops)):
-						#add to the norm sum
-						#the norm of the difference betweem the profile and the corresponding component given this order
-						norm_sum += np.linalg.norm(subpops[profile_index] - TZ[possible_component_order[i][profile_index]])
-
-					if norm_sum < best_norm_sum or best_norm_sum == -1:
-						best_norm_sum = norm_sum
-						best_order = i
-
-				component_order = possible_component_order[best_order]
-				#########################################################
-
-				#print
+				component_order = wt.match_components_to_profiles(W, TZ, subpops)
 
 				#########################################################
 				#print how close (norm) each component is to each matching profile
@@ -194,7 +181,7 @@ def main():
 	stds.append(rand_stds)
 	stds.append(pca_stds)
 	stds.append(ica_stds)
-	pbc.plot_bar_chart(types, means, stds, ['2', '3', '4', '5', '6'])
+	pbc.plot_bar_chart(types, means, stds, ['2', '3', '4', '5'], plot_file_name)
 
 	print '\nDONE'
 

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_bar_chart(types, means, stds, xaxis_labels):
+def plot_bar_chart(types, means, stds, xaxis_labels, save_as_name):
 
 	# the x locations for the groups
 	ind = np.arange(len(xaxis_labels))
@@ -33,5 +33,5 @@ def plot_bar_chart(types, means, stds, xaxis_labels):
 	ax.legend( (random[0], pca[0]), ('Random', 'PCA') )
 
 
-	plt.savefig('../plots/bar_plot_different_initializations_test.pdf')
+	plt.savefig(save_as_name)
 	print 'Saved plot'
