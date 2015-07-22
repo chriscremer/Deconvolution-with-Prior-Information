@@ -18,25 +18,23 @@ import random
 def init_model(init_type, numb_model_subpops, X):
 
 
-	if init_type == 0:
+	if init_type == 'Random_Values':
 		Z = np.random.rand(numb_model_subpops, len(X[0]))
-	elif init_type == 1:
-		# pca = PCA(n_components=numb_model_subpops)
-		# pca.fit(X.T)
-		# Z = pca.transform(X.T).T
+	elif init_type == 'Random_Samples':
 		Z = X[random.sample(range(len(X)), numb_model_subpops)]
-	else:
+	elif init_type == 'PCA':
+		pca = PCA(n_components=numb_model_subpops)
+		pca.fit(X.T)
+		Z = pca.transform(X.T).T		
+	elif init_type == 'ICA':
 		ica = FastICA(n_components=numb_model_subpops)
 		ica.fit(X.T)
-		Z = ica.transform(X.T).T		
-
-	#print 'Z shape ' + str(Z.shape)
+		Z = ica.transform(X.T).T
+	else:
+		print 'WHAT INITIALIZATION IS THIS?'		
 
 	T = np.identity(len(Z))
-	#print 'T shape ' + str(T.shape)
-
 	TZ = np.dot(T, Z)
-	#print 'TZ shape ' + str(TZ.shape)
 
 	return TZ
 

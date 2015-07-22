@@ -24,11 +24,14 @@ import global_variables as gv
 def main():
 
 	#PARAMETERS
-	plot_file_name = '../plots/bar_plot_different_initializations_test_first_x_samps_as_init.pdf'
+	plot_file_name = '../plots/dif_inits.pdf'
 	numb_samps = 50
 	numb_feats = 10000
-
-
+	min_components = 2
+	max_components = 6
+	numb_of_iterations = 4
+	numb_of_iters_to_remove_local_minima = 3
+	init_types = ['Random_Values', 'Random_Samples', 'PCA']
 
 	rand_means = []
 	pca_means = []
@@ -37,9 +40,13 @@ def main():
 	pca_stds = []
 	ica_stds = []
 
-	for numb_components in range(2, 6):
+	#list of lists, len(means) = #types, len(means[0]) = #components
+	means = [[] for x in init_types]
+	stds = [[] for x in init_types]
 
-		print 'Numb of Components =' + str(numb_components)
+	for numb_components in range(min_components, max_components+1):
+
+		print '\nNumb of Components =' + str(numb_components)
 
 		means_for_these_components = []
 		stds_for_these_components = []
@@ -49,62 +56,48 @@ def main():
 		#this is the number of components that are kept in pca
 		numb_model_subpops = numb_components
 		
-		#Evaluating the different Z initializations
-		# 1) Random 2) PCA 3) ICA
-		#types = ['Random', 'PCA', 'ICA']
-		types = ['Random', 'PCA']
-
 		profile_norm_scores = []
 		profile_norm_stds = []
 		freqs_norm_scores = []
 
 		#for each initialization type
-		for init_type in range(len(types)):
+		for init_type in range(len(init_types)):
 
-			print 'Testing ' + str(types[init_type])
+			print '-------Testing ' + init_types[init_type] + '--------'
 
 			profile_norm_store = []
 			freqs_norm_store = []
 
 			#iterate x times and get average
-			for iteration in range(6):
+			for iteration in range(numb_of_iterations):
 
 				print 'Iter ' + str(iteration)
-
-				#########################################################
 				#Make data
-				#params: #subpops, #feats, #samps
 				samps, freqs, subpops = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
-
-				#global X
-				X = samps
-				gv.set_X_global(X)
 
 				#make all frequencies have same number of entries
 				new_freqs = wt.same_numb_of_entries(numb_model_subpops, freqs)
 				#make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
 				start_freqs = wt.same_numb_of_entries_no_shuffle(numb_model_subpops, freqs)
 
-				#########################################################
-				#global possible_Ws
+				X = samps
+				gv.set_X_global(X)
+
 				possible_Ws = wt.get_possible_Ws(new_freqs)
 				gv.set_Ws_global(possible_Ws)
 
-
 				#try the same initilization type multiple times to prevent really bad local minimums
 				best_norm = -1
-				for try1 in range(5):
+				for try1 in range(numb_of_iters_to_remove_local_minima):
 
 					#Initializing model
-					TZ = mt.init_model(init_type, numb_model_subpops, X)
+					TZ = mt.init_model(init_types[init_type], numb_model_subpops, X)
 					gv.set_current_TZ(TZ)
 					#print 'Optimizing model..'
 					W, TZ = mt.optimize_model(possible_Ws, TZ)
 
 					X_hat = np.dot(W, TZ)
-					#print 'X_hat shape ' + str(X_hat.shape)
 					norm = np.linalg.norm(X - X_hat)
-					#print 'Initial norm ' + str(norm)
 					if norm < best_norm or best_norm == -1:
 						best_norm = norm
 						best_W = W
@@ -113,7 +106,6 @@ def main():
 				W = best_W
 				TZ = best_TZ
 
-				#print 'Finding all weight permutations..'
 				######################################################### 
 				# match the components to their profiles so printing makes sense
 				# so for each actual profile, find the row of TZ that is most similar to it
@@ -153,35 +145,17 @@ def main():
 				freqs_norm_store.append(sum1)
 				#########################################################
 
-			profile_norm_scores.append(np.mean(profile_norm_store))
-			profile_norm_stds.append(np.std(profile_norm_store))
-			freqs_norm_scores.append(np.mean(freqs_norm_store))
 
-			if init_type == 0:
-				rand_means.append(np.mean(profile_norm_store))
-				rand_stds.append(np.std(profile_norm_store))
-			elif init_type == 1:
-				pca_means.append(np.mean(profile_norm_store))
-				pca_stds.append(np.std(profile_norm_store))
-			else:
-				ica_means.append(np.mean(profile_norm_store))
-				ica_stds.append(np.std(profile_norm_store))
+			#Given type and numb of components, this the avg performance
+			mean_error = np.mean(profile_norm_store)
+			mean_std = np.std(profile_norm_store)
+			mean_freq_dif = np.mean(freqs_norm_store)
+
+			means[init_type].append(mean_error)
+			stds[init_type].append(mean_std)
 
 
-		#for i in range(len(types)):
-		#	print types[i] + ' Profiles_norm ' + str(profile_norm_scores[i]) + ' Freqs_norm ' + str(freqs_norm_scores[i])
-
-		#means_for_these_components.append()
-
-	means = []
-	stds = []
-	means.append(rand_means)
-	means.append(pca_means)
-	means.append(ica_means)
-	stds.append(rand_stds)
-	stds.append(pca_stds)
-	stds.append(ica_stds)
-	pbc.plot_bar_chart(types, means, stds, ['2', '3', '4', '5'], plot_file_name)
+	pbc.plot_bar_chart(init_types, means, stds, [str(x) for x in range(min_components, max_components+1)], plot_file_name)
 
 	print '\nDONE'
 
