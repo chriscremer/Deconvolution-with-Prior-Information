@@ -24,15 +24,15 @@ import global_variables as gv
 def main():
 
 	#PARAMETERS
-	plot_file_name = '../plots/dif_inits_best_init.pdf'
+	plot_file_name = '../plots/four_subpops.pdf'
 	numb_samps = 50
 	numb_feats = 10000
 	min_components = 2
-	max_components = 5
-	numb_of_contributing_profiles = -1
-	numb_of_iterations = 10
+	max_components = 6
+	numb_of_contributing_profiles = 4
+	numb_of_iterations = 5
 	numb_of_iters_to_remove_local_minima = 5
-	init_types = ['Random_Values', 'Random_Samples']
+	init_types = ['Random_Samples']
 
 	#list of lists, len(means) = #types, len(means[0]) = #components
 	means = [[] for x in init_types]
