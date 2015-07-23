@@ -63,7 +63,7 @@ def optimize_model(possible_Ws, TZ):
 		#print '         	Norm ' + str(new_norm)
 
 		if norm == new_norm:
-			print 'Number of iterations to optimize= ' + str(i)
+			print '# iters until optimized= ' + str(i)
 			break
 
 	return W, TZ

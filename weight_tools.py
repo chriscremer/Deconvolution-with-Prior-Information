@@ -159,7 +159,7 @@ def doWork(samp_index):
 
 def same_numb_of_entries(numb_model_subpops, freqs):
 	'''
-	make all frequencies have same number of entries
+	Make all frequencies have same number of entries
 	'''
 
 	new_freqs = []
@@ -220,29 +220,67 @@ def same_numb_of_entries_no_shuffle(numb_model_subpops, freqs):
 	return start_freqs
 
 
-def match_components_to_profiles(W, TZ, subpops):
+def match_components_to_profiles(TZ, subpops):
 	'''
-	match the components to their profiles so printing makes sense
+	Match the components to their profiles so comparing makes sense
 	so for each actual profile, find the row of TZ that is most similar to it
+
+	Need to account for when #subpops != #model components
 	'''
+	# possible_component_order = list(set(itertools.permutations(range(len(TZ)))))
+	# best_norm_sum = -1
+	# best_order = -1
+	# #for each possible ordering of the components
+	# for i in range(len(possible_component_order)):
+	# 	#keep track of the sum of the norms
+	# 	norm_sum = 0
+	# 	#for each profile 
+	# 	for profile_index in range(len(subpops)):
+	# 		#add to the norm sum
+	# 		#the norm of the difference betweem the profile and the corresponding component given this order
 
-	possible_component_order = list(set(itertools.permutations(range(len(TZ)))))
-	best_norm_sum = -1
-	best_order = -1
-	#for each possible ordering of the components
-	for i in range(len(possible_component_order)):
-		#keep track of the sum of the norms
-		norm_sum = 0
-		#for each profile 
-		for profile_index in range(len(subpops)):
-			#add to the norm sum
-			#the norm of the difference betweem the profile and the corresponding component given this order
-			norm_sum += np.linalg.norm(subpops[profile_index] - TZ[possible_component_order[i][profile_index]])
+	# 		print 'profile index ' + str(profile_index)
+	# 		print 'len subpops ' + str(len(subpops))
+	# 		print 'i ' + str(i)
+	# 		print 'len possible_component_order ' + str(len(possible_component_order))
+	# 		print 'len possible_component_order at i' + str(len(possible_component_order[i]))
 
-		if norm_sum < best_norm_sum or best_norm_sum == -1:
-			best_norm_sum = norm_sum
-			best_order = i
+	# 		#error comes from there being more actual subpops than modeled .
+	# 		#i 
 
-	component_order = possible_component_order[best_order]
+	# 		norm_sum += np.linalg.norm(subpops[profile_index] - TZ[possible_component_order[i][profile_index]])
 
-	return component_order
+	# 	if norm_sum < best_norm_sum or best_norm_sum == -1:
+	# 		best_norm_sum = norm_sum
+	# 		best_order = i
+	# component_order = possible_component_order[best_order]
+	# return component_order
+
+
+	#Will start over
+	#For each model component (row of TZ), find the profile (row of subpops) that minimizes norm
+	#then return a list of indexes refering to the index of the profiles 
+	#so its TZ[component_order]
+	#component_order is list of indexes refering to profiles
+
+	#NO
+	#its the other way around
+	#for each profile, find the component that models it best
+
+	component_order = []
+	norm_sum = 0
+	for i in range(len(subpops)):
+		best_norm = -1
+		best_index = -1
+
+		for j in range(len(TZ)):
+			norm = np.linalg.norm(subpops[i] - TZ[j])
+
+			if norm < best_norm or best_norm == -1:
+				best_norm = norm
+				best_index = i
+
+		component_order.append(best_index)
+		norm_sum += best_norm
+
+	return component_order, norm_sum
