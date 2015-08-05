@@ -5,7 +5,7 @@ import itertools
 import multiprocessing as mp
 
 
-def get_possible_Ws(freqs):
+def get_possible_Ws(freqs, allow_combos=True):
 	'''
 	Given the frequencies of the subpopulations within a sample, this
 	function wil return a list of lists of the possible assignments 
@@ -21,44 +21,46 @@ def get_possible_Ws(freqs):
 		#find permuations and remove the duplicates
 		perms = list(set(itertools.permutations(freqs[i])))
 
-		#now find all combinations of sums of freqs (combine 2)
-		combs = list(itertools.combinations(range(len(freqs[i])), 2))
-		for j in range(len(combs)):
-			#see if this combo has any zeros
-			#if it does skip it
-			skip = 0
-			for index in combs[j]:
-				if freqs[i][index] == 0.0:
-					skip =1 
-					break
-			if skip == 1:
-				continue
-			#combine the freqencies and replace one with a zero
-			new_freq = list(freqs[i])
-			new_freq[combs[j][0]] = new_freq[combs[j][0]] + new_freq[combs[j][1]]
-			new_freq[combs[j][1]] = 0.0
-			new_perms = list(set(itertools.permutations(new_freq)))
-			perms.extend(new_perms)
-			
-		#now find all combinations of sums of freqs (combine 3)
-		combs = list(itertools.combinations(range(len(freqs[i])), 3))
-		for j in range(len(combs)):
-			#see if this combo has any zeros
-			#if it does skip it
-			skip = 0
-			for index in combs[j]:
-				if freqs[i][index] == 0.0:
-					skip =1 
-					break
-			if skip == 1:
-				continue
-			#combine the freqencies and replace one with a zero
-			new_freq = list(freqs[i])
-			new_freq[combs[j][0]] = new_freq[combs[j][0]] + new_freq[combs[j][1]] + new_freq[combs[j][2]]
-			new_freq[combs[j][1]] = 0.0
-			new_freq[combs[j][2]] = 0.0
-			new_perms = list(set(itertools.permutations(new_freq)))
-			perms.extend(new_perms)
+
+		if allow_combos:
+			#now find all combinations of sums of freqs (combine 2)
+			combs = list(itertools.combinations(range(len(freqs[i])), 2))
+			for j in range(len(combs)):
+				#see if this combo has any zeros
+				#if it does skip it
+				skip = 0
+				for index in combs[j]:
+					if freqs[i][index] == 0.0:
+						skip =1 
+						break
+				if skip == 1:
+					continue
+				#combine the freqencies and replace one with a zero
+				new_freq = list(freqs[i])
+				new_freq[combs[j][0]] = new_freq[combs[j][0]] + new_freq[combs[j][1]]
+				new_freq[combs[j][1]] = 0.0
+				new_perms = list(set(itertools.permutations(new_freq)))
+				perms.extend(new_perms)
+				
+			#now find all combinations of sums of freqs (combine 3)
+			combs = list(itertools.combinations(range(len(freqs[i])), 3))
+			for j in range(len(combs)):
+				#see if this combo has any zeros
+				#if it does skip it
+				skip = 0
+				for index in combs[j]:
+					if freqs[i][index] == 0.0:
+						skip =1 
+						break
+				if skip == 1:
+					continue
+				#combine the freqencies and replace one with a zero
+				new_freq = list(freqs[i])
+				new_freq[combs[j][0]] = new_freq[combs[j][0]] + new_freq[combs[j][1]] + new_freq[combs[j][2]]
+				new_freq[combs[j][1]] = 0.0
+				new_freq[combs[j][2]] = 0.0
+				new_perms = list(set(itertools.permutations(new_freq)))
+				perms.extend(new_perms)
 
 		#print len(combs)
 		#print combs
@@ -117,7 +119,10 @@ def select_w_parallel(possible_Ws):
 
 	#TODO
 	#need to make sure that the order it returns is the correct order
+	#the get(99) allows me to exit while running
 	W = pool.map_async(doWork, samp_indexes).get(99999)
+
+	#I think this fixed the resource problem, not sure how/why
 	pool.close()
 	pool.join()
 	#print 'W ' + str(len(W)) + ' ' + str(len(W[0]))

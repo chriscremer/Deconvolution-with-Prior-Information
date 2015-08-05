@@ -16,26 +16,47 @@ import itertools
 
 import plot_bar_chart as pbc
 import read_TCGA_gene_data as rtgd
+
+
 import weight_tools as wt
 import model_tools as mt
 
 import global_variables as gv
 
-
 from scipy.stats import multivariate_normal as mn
+
 
 def main():
 
 	#PARAMETERS
-	plot_file_name = '../plots/four_subpops.pdf'
-	numb_samps = 50
-	numb_feats = 10000
+	plot_file_name = '../plots/TCGA_batch108.pdf'
 	min_components = 2
 	max_components = 6
-	numb_of_contributing_profiles = 4
-	numb_of_iterations = 5
-	numb_of_iters_to_remove_local_minima = 5
+	numb_of_iterations = 1
+	numb_of_iters_to_remove_local_minima = 3
 	init_types = ['Random_Samples']
+
+	X, file_names = rtgd.read_data_folder()
+	print 'real data shape ' + str(X.shape)
+	print 'file names len ' + str(len(file_names))
+
+	cellularities = rtgd.read_cellularities()
+	print 'len biotab_cellularities ' + str(len(cellularities))
+
+	ordered_cellularities = rtgd.match_cellularities_to_files(file_names, cellularities)
+	print 'len ordered cellularities ' + str(ordered_cellularities)
+
+	freqs = rtgd.convert_cells_to_freqs(ordered_cellularities)
+	#print freqs
+
+	#set variables to global
+	gv.set_X_global(X)
+
+
+	#TODO
+	#run with cellularities as frequencies
+
+
 
 	#list of lists, len(means) = #types, len(means[0]) = #components
 	means = [[] for x in init_types]
@@ -44,12 +65,6 @@ def main():
 	for numb_components in range(min_components, max_components+1):
 
 		print '\nNumb of Components =' + str(numb_components)
-		#this is the number of profiles that exist in the simulated data
-		#if -1 then set them equal
-		if numb_of_contributing_profiles == -1:
-			numb_subpops = numb_components
-		else:
-			numb_subpops = numb_of_contributing_profiles
 
 		#store the scores for each iter for each type
 		scores = [[] for x in init_types]
@@ -60,18 +75,18 @@ def main():
 			print 'Iter ' + str(iteration)
 
 			#Make data
-			samps, freqs, subpops = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
+			#samps, freqs, subpops = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
 
 			#make all frequencies have same number of entries
 			new_freqs = wt.same_numb_of_entries(numb_components, freqs)
-			#make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
-			start_freqs = wt.same_numb_of_entries_no_shuffle(numb_components, freqs)
 
-			X = samps
-			gv.set_X_global(X)
-
-			possible_Ws = wt.get_possible_Ws(new_freqs)
+			possible_Ws = wt.get_possible_Ws(new_freqs, allow_combos=False)
 			gv.set_Ws_global(possible_Ws)
+
+			#make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
+			#sstart_freqs = wt.same_numb_of_entries_no_shuffle(numb_components, freqs)
+
+			#X = samps
 
 			#profile_norm_store = []
 			#freqs_norm_store = []
@@ -103,36 +118,40 @@ def main():
 				TZ = best_TZ
 				X_hat = np.dot(W, TZ)
 
+				print W
+
+
+
 
 				#Likelihood = P(D|W,Z) = \prod P(d|W,Z) assuming IID
 				# P(d|W,Z) = N(d|WZ, cov)
 
 				#cov = numpy.zeros((len(TZ),len(TZ)))
-				cov = np.identity(len(X[0]))
+				#cov = np.identity(len(X[0]))
 
-				L = 1
-				for samp in range(len(X)):
-					this_samp_L = mn.pdf(X[samp], mean=X_hat[samp], cov=cov)
+				# L = 1
+				# for samp in range(len(X)):
+				# 	this_samp_L = mn.pdf(X[samp], mean=X_hat[samp], cov=cov)
 
-					print this_samp_L
+				# 	print this_samp_L
 
-					aadfs
+				# 	aadfs
 
-					L = L * this_samp_L
+				# 	L = L * this_samp_L
 
 
 
-				gaussian_pdf = mn.pdf(x, mean=2.5, cov=cov)
+				# gaussian_pdf = mn.pdf(x, mean=2.5, cov=cov)
 
 
 
 				######################################################### 
 				# match the components to their profiles so comparing makes sense
 				# so for each actual profile, find the row of TZ that is most similar to it
-				component_order, norm_sum = wt.match_components_to_profiles(TZ, subpops)
-				print 'Sum profile norm ' + str(norm_sum)
+				# component_order, norm_sum = wt.match_components_to_profiles(TZ, subpops)
+				# print 'Sum profile norm ' + str(norm_sum)
 
-				scores[init_type].append(norm_sum)
+				# scores[init_type].append(norm_sum)
 
 				#profile_norm_store.append(norm_sum)
 
@@ -180,14 +199,14 @@ def main():
 		# stds[init_type].append(mean_std)
 
 		#take averages for each iter and type and put into lists
-		for t in range(len(init_types)):
-			mean = np.mean(scores[t])
-			std = np.std(scores[t])
-			means[t].append(mean)
-			stds[t].append(std)
+		# for t in range(len(init_types)):
+		# 	mean = np.mean(scores[t])
+		# 	std = np.std(scores[t])
+		# 	means[t].append(mean)
+		# 	stds[t].append(std)
 
 
-	pbc.plot_bar_chart(init_types, means, stds, [str(x) for x in range(min_components, max_components+1)], plot_file_name)
+	#pbc.plot_bar_chart(init_types, means, stds, [str(x) for x in range(min_components, max_components+1)], plot_file_name)
 
 	print '\nDONE'
 
