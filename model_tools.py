@@ -41,20 +41,41 @@ def init_model(init_type, numb_model_subpops, X):
 
 def optimize_model(possible_Ws, TZ):
 
-	for i in range(50):
+	for i in range(200):
 
 		#print 'Iter ' + str(i)
 
 		#print 'selecting W'
-		#W = select_w(X, possible_Ws, TZ)
+		# W = select_w(X, possible_Ws, TZ)
+
+		#this is the restricted way
 		W = wt.select_w_parallel(possible_Ws)
+
+		#print W.shape
+
+
+		#this is the non-constrained way
+		# W = np.dot(pinv(np.dot(TZ,TZ.T)), np.dot(TZ, gv.X.T))
+		# W = W.T
+
+		#W = np.dot(pinv(np.identity(len(TZ))*0.01 + np.dot(TZ,TZ.T)), np.dot(TZ, gv.X.T))
+		#print W.shape
+
+
 		X_hat = np.dot(W, TZ)
 		norm = np.linalg.norm(gv.X - X_hat)
 		#print '         	Norm ' + str(norm)
 
 
+
 		#print 'optimizig TZ'
 		TZ = np.dot(pinv(np.dot(W.T,W)), np.dot(W.T, gv.X))
+
+
+		# for row in range(len(TZ)):
+		# 	for col in range(len(TZ[row])):
+		# 		if TZ[row][col] < 0:
+		# 			print 'HEGATIVE'
 
 		gv.set_current_TZ(TZ)
 

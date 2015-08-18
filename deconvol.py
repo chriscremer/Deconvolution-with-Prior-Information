@@ -31,10 +31,10 @@ def main():
 	numb_samps = 50
 	numb_feats = 10000
 	min_components = 2
-	max_components = 6
-	numb_of_contributing_profiles = 4
-	numb_of_iterations = 5
-	numb_of_iters_to_remove_local_minima = 5
+	max_components = 2
+	numb_of_contributing_profiles = 2
+	numb_of_iterations = 4
+	numb_of_iters_to_remove_local_minima = 3
 	init_types = ['Random_Samples']
 
 	#list of lists, len(means) = #types, len(means[0]) = #components
@@ -108,21 +108,21 @@ def main():
 				# P(d|W,Z) = N(d|WZ, cov)
 
 				#cov = numpy.zeros((len(TZ),len(TZ)))
-				cov = np.identity(len(X[0]))
+				# cov = np.identity(len(X[0]))
 
-				L = 1
-				for samp in range(len(X)):
-					this_samp_L = mn.pdf(X[samp], mean=X_hat[samp], cov=cov)
+				# L = 1
+				# for samp in range(len(X)):
+				# 	this_samp_L = mn.pdf(X[samp], mean=X_hat[samp], cov=cov)
 
-					print this_samp_L
+				# 	print this_samp_L
 
-					aadfs
+				# 	aadfs
 
-					L = L * this_samp_L
+				# 	L = L * this_samp_L
 
 
 
-				gaussian_pdf = mn.pdf(x, mean=2.5, cov=cov)
+				# gaussian_pdf = mn.pdf(x, mean=2.5, cov=cov)
 
 
 

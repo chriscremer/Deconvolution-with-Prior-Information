@@ -289,3 +289,25 @@ def match_components_to_profiles(TZ, subpops):
 		norm_sum += best_norm
 
 	return component_order, norm_sum
+
+
+
+
+
+def select_w_parallel_NEW():
+
+	import global_variables as gv
+
+	samp_indexes = range(len(gv.Ws))
+	numb_cpus = mp.cpu_count()
+
+	pool = mp.Pool()
+	W = pool.map_async(doWork, samp_indexes).get(99999)
+	pool.close()
+	pool.join()
+
+
+	return np.array(W)
+
+
+def doWork_NEW(samp_index):

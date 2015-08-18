@@ -28,6 +28,7 @@ from scipy.stats import multivariate_normal as mn
 
 def main():
 
+
 	#PARAMETERS
 	plot_file_name = '../plots/TCGA_batch108.pdf'
 	min_components = 2
@@ -36,17 +37,25 @@ def main():
 	numb_of_iters_to_remove_local_minima = 3
 	init_types = ['Random_Samples']
 
-	X, file_names = rtgd.read_data_folder()
+	data_directory = '/data1/morrislab/ccremer/TCGA_data/breast_batch61/'
+	#manifest_file = '../../ISOpure_PCAWG/batch_108_prostate/file_manifest.txt'
+	#rnaseq_directory = '/data1/morrislab/ccremer/ISOpure_PCAWG/batch_108_prostate/RNASeqV2/UNC__IlluminaHiSeq_RNASeqV2/Level_3/'
+
+	X, file_names = rtgd.read_data_folder(data_directory)
 	print 'real data shape ' + str(X.shape)
 	print 'file names len ' + str(len(file_names))
 
-	cellularities = rtgd.read_cellularities()
+	cellularities = rtgd.read_cellularities(data_directory)
 	print 'len biotab_cellularities ' + str(len(cellularities))
 
-	ordered_cellularities = rtgd.match_cellularities_to_files(file_names, cellularities)
-	print 'len ordered cellularities ' + str(ordered_cellularities)
+	ordered_cellularities, sample_order = rtgd.match_cellularities_to_files(file_names, cellularities, data_directory)
+	print 'len ordered cellularities ' + str(len(ordered_cellularities))
 
 	freqs = rtgd.convert_cells_to_freqs(ordered_cellularities)
+
+	ordered_subtypes = rtgd.get_subtype(sample_order, data_directory)
+	print 'len ordered subtypes ' + str(len(ordered_subtypes))
+
 	#print freqs
 
 	#set variables to global
@@ -118,9 +127,24 @@ def main():
 				TZ = best_TZ
 				X_hat = np.dot(W, TZ)
 
-				print W
+				for i in range(len(ordered_subtypes)):
+					if ordered_subtypes[i] == 'Lum A':
+						print str(W[i]) + '  ' + ordered_subtypes[i]
 
+				for i in range(len(ordered_subtypes)):
+					if ordered_subtypes[i] == 'Lum B':
+						print str(W[i]) + '  ' + ordered_subtypes[i]
 
+				for i in range(len(ordered_subtypes)):
+					if ordered_subtypes[i] == 'Basal':
+						print str(W[i]) + '  ' + ordered_subtypes[i]
+
+				for i in range(len(ordered_subtypes)):
+					if ordered_subtypes[i] == 'Her2':
+						print str(W[i]) + '  ' + ordered_subtypes[i]
+				for i in range(len(ordered_subtypes)):
+					if ordered_subtypes[i] == 'normal':
+						print str(W[i]) + '  ' + ordered_subtypes[i]
 
 
 				#Likelihood = P(D|W,Z) = \prod P(d|W,Z) assuming IID

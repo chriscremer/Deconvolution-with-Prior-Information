@@ -5,14 +5,14 @@ import os
 import numpy as np
 import csv
 
-def read_data_folder():
+def read_data_folder(data_directory):
 
 	data = []
 	file_names = []
 
-	directory = '/data1/morrislab/ccremer/ISOpure_PCAWG/batch_108_prostate/RNASeqV2/UNC__IlluminaHiSeq_RNASeqV2/Level_3/'
+	directory = data_directory + 'RNASeqV2/UNC__IlluminaHiSeq_RNASeqV2/Level_3/'
 
-	manifest_file = '../../ISOpure_PCAWG/batch_108_prostate/file_manifest.txt'
+	manifest_file = data_directory + 'file_manifest.txt'
 
 
 	for file123 in os.listdir(directory):
@@ -58,9 +58,9 @@ def read_data_folder():
 
 
 
-def read_cellularities():
+def read_cellularities(data_directory):
 
-	cellularity_file = '/data1/morrislab/ccremer/ISOpure_PCAWG/batch_108_prostate/Clinical/Biotab/nationwidechildrens.org_biospecimen_tumor_sample_prad.txt'
+	cellularity_file = data_directory + 'Clinical/Biotab/nationwidechildrens.org_biospecimen_tumor_sample_brca.txt'
 
 	biotab_cellularities = []
 
@@ -73,7 +73,10 @@ def read_cellularities():
 				b += 1
 				continue
 
-			biotab_cellularities.append([row[1], row[4]])
+			if 'prad' in cellularity_file:
+				biotab_cellularities.append([row[1], row[4]])
+			elif 'brca' in cellularity_file:
+				biotab_cellularities.append([row[1], row[5]])
 
 			b += 1
 	f.close()
@@ -83,11 +86,12 @@ def read_cellularities():
 
 
 
-def match_cellularities_to_files(file_names, cellularities):
+def match_cellularities_to_files(file_names, cellularities, data_directory):
 
-	manifest_file = '../../ISOpure_PCAWG/batch_108_prostate/file_manifest.txt'
+	manifest_file = data_directory + 'file_manifest.txt'
 
 	ordered_cellularities = []
+	sample_order = []
 
 	for file_name in file_names:
 		with open(manifest_file, 'rU') as f:
@@ -104,16 +108,23 @@ def match_cellularities_to_files(file_names, cellularities):
 						for samp in cellularities:
 							if samp[0] in sample_name:
 								ordered_cellularities.append(samp[1])
-								break
+								sample_order.append(sample_name)
 								
-					if sample_name.endswith('11'):
+						break
+
+					elif sample_name.endswith('11'):
 						ordered_cellularities.append('100')
+						sample_order.append(sample_name)
 						break
 
 					else:
+						print 'HEYHEYHEY'
 						break
 
-	return ordered_cellularities
+			#print file_name
+			#print ordered_cellularities
+
+	return ordered_cellularities, sample_order
 
 
 def convert_cells_to_freqs(ordered_cellularities):
@@ -126,3 +137,64 @@ def convert_cells_to_freqs(ordered_cellularities):
 		freqs.append(np.array([cell_float, 1.0-cell_float]))
 
 	return np.array(freqs)
+
+
+
+def get_subtype(sample_order, data_directory):
+
+	ordered_subtypes = []
+
+	patient_file = data_directory + 'Clinical/Biotab/nationwidechildrens.org_clinical_patient_brca.txt' 
+
+	for samp_name in sample_order:
+
+		patient = samp_name[:12]
+
+		with open(patient_file, 'rU') as f:
+			reader = csv.reader(f, delimiter='\t')
+			count = 0
+			for row in reader:
+				#print count
+				if count < 3:
+					count += 1
+					continue
+
+
+				if row[1] != patient:
+					#print row[1] + ' looking for ' + patient
+					continue
+
+
+				#print row[1] + ' ==  ' + patient
+
+				er_status = row[43]
+				her2_status = row[55]
+
+				#print 'ER status ' + str(er_status)
+				#print 'HER2 status ' + str(her2_status)
+
+				subtype = 'none'
+				if samp_name.endswith('11'):
+					subtype = 'normal'
+				elif er_status == 'Positive':
+					if her2_status == 'Positive':
+						subtype = 'Lum B'
+					elif her2_status == 'Negative':
+						subtype = 'Lum A'
+				elif er_status == 'Negative':
+					if her2_status == 'Positive':
+						subtype = 'Her2'
+					elif her2_status == 'Negative':
+						subtype = 'Basal'
+
+				#print 'Subtype ' + str(subtype) + '\n'
+
+				ordered_subtypes.append(subtype)
+
+				count +=1
+
+
+		#print patient
+		#print len(ordered_subtypes)
+
+	return ordered_subtypes
