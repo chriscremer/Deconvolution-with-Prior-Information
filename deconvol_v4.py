@@ -23,7 +23,7 @@ import model_tools as mt
 
 import global_variables as gv
 
-
+import time
 
 from scipy.stats import multivariate_normal as mn
 
@@ -31,46 +31,48 @@ def main():
 
 
 	#make my own data
-	data = []
-	purities = []
-	dimensions = 100
-	component_1 = np.random.rand(dimensions) 
-	component_2 = np.random.rand(dimensions)
-	component_3 = np.random.rand(dimensions)
-	component_4 = np.random.rand(dimensions)
-	hidden_profiles = [component_1, component_2, component_3, component_4]
-	for i in range(1,10,3):
-	    for j in range(1,10,3):
-	    	for k in range(1,10,3):
-	    		for l in range(1,10,3):
-			        norm_i = i*1.0/(i+j+k+l)
-			        norm_j = j*1.0/(i+j+k+l)
-			        norm_k = k*1.0/(i+j+k+l)
-			        norm_l = l*1.0/(i+j+k+l)
-			        # qwer = component_1*norm_i + component_2*norm_j
-			        # qwer = np.array(qwer)
-			        # print 'qwer shape ' + str(qwer.shape)
-			        # afds
-			        purities.append([norm_i, norm_j, norm_k, norm_l])
-			        data.append(component_1*norm_i + component_2*norm_j + component_3*norm_k + component_4*norm_l)
+	# data = []
+	# purities = []
+	# dimensions = 100
+	# component_1 = np.random.rand(dimensions) 
+	# component_2 = np.random.rand(dimensions)
+	# component_3 = np.random.rand(dimensions)
+	# component_4 = np.random.rand(dimensions)
+	# hidden_profiles = [component_1, component_2, component_3, component_4]
+	# for i in range(1,10,3):
+	#     for j in range(1,10,3):
+	#     	for k in range(1,10,3):
+	#     		for l in range(1,10,3):
+	# 		        norm_i = i*1.0/(i+j+k+l)
+	# 		        norm_j = j*1.0/(i+j+k+l)
+	# 		        norm_k = k*1.0/(i+j+k+l)
+	# 		        norm_l = l*1.0/(i+j+k+l)
+	# 		        # qwer = component_1*norm_i + component_2*norm_j
+	# 		        # qwer = np.array(qwer)
+	# 		        # print 'qwer shape ' + str(qwer.shape)
+	# 		        # afds
+	# 		        purities.append([norm_i, norm_j, norm_k, norm_l])
+	# 		        data.append(component_1*norm_i + component_2*norm_j + component_3*norm_k + component_4*norm_l)
 
-	data = np.array(data)
-	print 'Data shape ' + str(data.shape)
-	X = data
+	# data = np.array(data)
+	# print 'Data shape ' + str(data.shape)
+	# X = data
 
-	X = np.array(X)
-	gv.set_X_global(X)
-	print X.shape
+	# X = np.array(X)
+	# gv.set_X_global(X)
+	# print X.shape
 
-	freqs = np.array(purities)
-	gv.set_freqs_global(freqs)
+	# freqs = np.array(purities)
+	# gv.set_freqs_global(freqs)
 
 	#PARAMETERS
 	# plot_file_name = '../plots/four_subpops.pdf'
 	# numb_samps = 50
 	# numb_feats = 10000
-	min_components = 4
-	max_components = 4
+
+	k = 40
+	min_components = k
+	max_components = k
 	# numb_of_contributing_profiles = 2
 	numb_of_iterations = 1
 	numb_of_iters_to_remove_local_minima = 2
@@ -79,6 +81,9 @@ def main():
 	#list of lists, len(means) = #types, len(means[0]) = #components
 	# means = [[] for x in init_types]
 	# stds = [[] for x in init_types]
+
+
+	start = time.time()
 
 	for numb_components in range(min_components, max_components+1):
 
@@ -98,19 +103,33 @@ def main():
 
 			print 'Iter ' + str(iteration)
 
+
+			
 			#Make data
-			# samps, freqs, subpops = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
+			numb_subpops = k
+			numb_feats = 1000
+			numb_samps = 1000
+			X, freqs, real_profiles = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
+
+			gv.set_X_global(X)
+			gv.set_freqs_global(freqs)
+
+			print X.shape
+			print freqs.shape
+			print 'Example freq ' + str(freqs[0])
+			print real_profiles.shape
+
 
 			#make all frequencies have same number of entries
-			new_freqs = wt.same_numb_of_entries(numb_components, freqs)
+			# new_freqs = wt.same_numb_of_entries(numb_components, freqs)
 			#make all frequencies have same number of entries, WITHOUT SHUFFLING, used for comparing at the end
 			# start_freqs = wt.same_numb_of_entries_no_shuffle(numb_components, freqs)
 
 			# X = samps
 			# gv.set_X_global(X)
 
-			possible_Ws = wt.get_possible_Ws(new_freqs)
-			gv.set_Ws_global(possible_Ws)
+			# possible_Ws = wt.get_possible_Ws(new_freqs)
+			# gv.set_Ws_global(possible_Ws)
 
 			#profile_norm_store = []
 			#freqs_norm_store = []
@@ -129,7 +148,7 @@ def main():
 					TZ = mt.init_model(init_types[init_type], numb_components, X)
 					gv.set_current_TZ(TZ)
 					print 'Optimizing model..'
-					W, TZ = mt.optimize_model(possible_Ws, TZ)
+					W, TZ = mt.optimize_model(TZ)
 
 					X_hat = np.dot(W, TZ)
 					norm = np.linalg.norm(X - X_hat)
@@ -145,9 +164,12 @@ def main():
 
 
 			for learned_profile in range(len(TZ)):
-				for hidden_profile in range(len(hidden_profiles)):
-					print 'Learned profile ' + str(learned_profile) + ' norm with hidden profile ' + str(hidden_profile) + ' = ' + str(np.linalg.norm(TZ[learned_profile] - hidden_profiles[hidden_profile]))
-				print
+				hidden_norms = []
+				for hidden_profile in range(len(real_profiles)):
+					hidden_norms.append(np.linalg.norm(TZ[learned_profile] - real_profiles[hidden_profile]))
+				val, idx = min((val, idx) for (idx, val) in enumerate(hidden_norms))
+				print 'Predicted k ' + str(learned_profile) + ' avg norm with hidden profiles ' + str(np.mean(hidden_norms)) + ' min norm ' + str(val) + ' with real profile' + str(idx)
+	
 
 				#compare profiles to real pure samples
 				# norm_order1 = 0
@@ -328,6 +350,8 @@ def main():
 	# pbc.plot_bar_chart(init_types, means, stds, [str(x) for x in range(min_components, max_components+1)], plot_file_name)
 
 	print '\nDONE'
+	end = time.time()
+	print end - start
 
 
 

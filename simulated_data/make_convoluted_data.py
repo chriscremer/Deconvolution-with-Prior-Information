@@ -30,7 +30,7 @@ def subpop_frequencies(numb_samps, numb_of_subpops):
 		this_samp = []
 		for j in range(numb_of_subpops):
 			rand = random.random()
-			if rand > 0.5:
+			if rand > 0.2:
 				this_samp.append(0.0)
 			else:
 				this_samp.append(random.random())

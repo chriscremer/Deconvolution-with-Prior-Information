@@ -104,14 +104,14 @@ def select_w(X, possible_Ws, TZ):
 
 
 
-def select_w_parallel(possible_Ws):
+def select_w_parallel():
 	'''
 	Same as select_w but this function used the multiple cores
 	'''
 
-
+	import global_variables as gv
 	#samp_indexes = [i for i in range(len(possible_Ws))]
-	samp_indexes = range(len(possible_Ws))
+	samp_indexes = range(len(gv.X))
 	numb_cpus = mp.cpu_count()
 	#numb_cpus = 10
 	#print 'numb of cpus' + str(numb_cpus)
@@ -298,7 +298,7 @@ def select_w_parallel_NEW():
 
 	import global_variables as gv
 
-	samp_indexes = range(len(gv.Ws))
+	samp_indexes = range(len(gv.X))
 	numb_cpus = mp.cpu_count()
 
 	pool = mp.Pool()
@@ -314,11 +314,16 @@ def doWork_NEW(samp_index):
 	import global_variables as gv
 	#get its freqs
 	fs = gv.freqs[samp_index]
+	#descending
 	fs = sorted(fs, reverse=True)
 	n_profiles = len(gv.TZ)
 	weight_vector = np.zeros(n_profiles)
 	current_v = weight_vector
+	current_norm = -1
 	for f in fs:
+
+		if f == 0.0:
+			break
 
 		best_norm = -1
 
@@ -331,8 +336,17 @@ def doWork_NEW(samp_index):
 			if norm < best_norm or best_norm == -1:
 				best_norm = norm
 				best_v = v
+				best_scaled_v = v_scaled
 
 		current_v = best_v
+		current_norm = best_norm
+		current_scaled_v = best_scaled_v
 
+	if best_norm == -1:
+		print 'IT SHOULDNT BE -1'
 
-	return current_v
+	if best_norm > gv.norms[samp_index] and gv.norms[samp_index] != -1:
+		return gv.W[samp_index]
+	else:
+		gv.norms[samp_index] = best_norm
+		return current_scaled_v
