@@ -41,6 +41,7 @@ def init_model(init_type, numb_model_subpops, X):
 
 def optimize_model(possible_Ws, TZ):
 
+	printed = 0
 	for i in range(200):
 
 		#print 'Iter ' + str(i)
@@ -49,14 +50,16 @@ def optimize_model(possible_Ws, TZ):
 		# W = select_w(X, possible_Ws, TZ)
 
 		#this is the restricted way
-		W = wt.select_w_parallel(possible_Ws)
-
-		#print W.shape
-
+		#W = wt.select_w_parallel(possible_Ws)
 
 		#this is the non-constrained way
 		# W = np.dot(pinv(np.dot(TZ,TZ.T)), np.dot(TZ, gv.X.T))
 		# W = W.T
+
+		#this is the new way
+		W = wt.select_w_parallel_NEW()
+
+		# print W
 
 		#W = np.dot(pinv(np.identity(len(TZ))*0.01 + np.dot(TZ,TZ.T)), np.dot(TZ, gv.X.T))
 		#print W.shape
@@ -85,6 +88,8 @@ def optimize_model(possible_Ws, TZ):
 
 		if norm == new_norm:
 			print '# iters until optimized= ' + str(i)
+			printed = 1
 			break
-
+	if printed == 0:
+		print '# iters went to limit: ' + str(200)
 	return W, TZ

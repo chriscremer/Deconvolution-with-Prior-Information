@@ -302,12 +302,37 @@ def select_w_parallel_NEW():
 	numb_cpus = mp.cpu_count()
 
 	pool = mp.Pool()
-	W = pool.map_async(doWork, samp_indexes).get(99999)
+	W = pool.map_async(doWork_NEW, samp_indexes).get(99999)
 	pool.close()
 	pool.join()
-
 
 	return np.array(W)
 
 
 def doWork_NEW(samp_index):
+
+	import global_variables as gv
+	#get its freqs
+	fs = gv.freqs[samp_index]
+	fs = sorted(fs, reverse=True)
+	n_profiles = len(gv.TZ)
+	weight_vector = np.zeros(n_profiles)
+	current_v = weight_vector
+	for f in fs:
+
+		best_norm = -1
+
+		for i in range(n_profiles):
+			v = current_v.copy()
+			v[i] = f
+			v_scaled = v / sum(v)
+			X_hat = np.dot(gv.TZ.T, v_scaled)
+			norm = np.linalg.norm(gv.X[samp_index] - X_hat)
+			if norm < best_norm or best_norm == -1:
+				best_norm = norm
+				best_v = v
+
+		current_v = best_v
+
+
+	return current_v

@@ -16,3 +16,8 @@ def set_current_TZ(para):
 
 	global TZ
 	TZ = para
+
+def set_freqs_global(para):
+
+	global freqs
+	freqs = para
