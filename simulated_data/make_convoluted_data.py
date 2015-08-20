@@ -18,7 +18,7 @@ def make_subpopulations(numb_of_subpops, numb_of_feats):
 	return subpops
 
 
-def subpop_frequencies(numb_samps, numb_of_subpops):
+def subpop_frequencies(numb_samps, numb_of_subpops, percent_hidden):
 	'''
 	Define the frequency of each subpop in each sample
 	'''
@@ -30,7 +30,7 @@ def subpop_frequencies(numb_samps, numb_of_subpops):
 		this_samp = []
 		for j in range(numb_of_subpops):
 			rand = random.random()
-			if rand > 0.2:
+			if rand > percent_hidden:
 				this_samp.append(0.0)
 			else:
 				this_samp.append(random.random())
@@ -103,14 +103,14 @@ def make_csv(data):
 
 
 
-def run_and_return(numb_of_subpops, numb_of_feats, numb_samps):
+def run_and_return(numb_of_subpops, numb_of_feats, numb_samps, percent_hidden):
 	'''
 	Run the methods to create the data and return it
 	'''
 
 	subpops = make_subpopulations(numb_of_subpops, numb_of_feats)
 	#print 'subpops shape ' + str(subpops.shape)
-	freqs = subpop_frequencies(numb_samps, numb_of_subpops)
+	freqs = subpop_frequencies(numb_samps, numb_of_subpops, percent_hidden)
 	#print 'freqs shape ' + str(freqs.shape)
 	samps = make_samps(numb_samps, subpops, freqs)
 	#print 'samps shape ' + str(samps.shape)
