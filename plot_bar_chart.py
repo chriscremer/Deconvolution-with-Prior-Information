@@ -137,4 +137,20 @@ def plot_three_lines_with_text(y_values, y2_values, y3_values, x_values, y_label
 
 	
 
+def plot_three_lines_with_text_with_xlog_scale(y_values, y2_values, y3_values, x_values, y_label, x_label, save_as_name, text):
+
+	fig = plt.figure()
+	ax1 = fig.add_axes((.1,.4,.8,.5))
+	ax1.plot(x_values, y_values, 'b.-')
+	ax1.plot(x_values, y2_values, 'r.-')
+	ax1.plot(x_values, y3_values, 'g.-')
+	fig.text(.1,.15,text, size='x-small')
+
+	plt.xlabel(x_label)
+	plt.ylabel(y_label)
+
+	ax1.set_xscale('log')
+
+	plt.savefig(save_as_name)
+	print 'Saved plot'
 

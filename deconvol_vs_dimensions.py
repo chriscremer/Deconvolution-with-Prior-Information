@@ -110,15 +110,18 @@ def main():
 			scores2 = []
 			scores3 = []
 			# p_h_list = [.1, .2, .3, .4, .5, .6, .7, .8, .9, 1.0]
-			n_samples = [10, 20, 50, 100, 200, 500, 1000]
-			for n_samps in n_samples:
+			# n_samples = [10, 20, 50, 100, 200, 500, 1000]
+			# n_dimensions = [10, 100, 500, 1000, 5000, 10000, 20000, 30000]
+			n_dimensions = [10, 100, 500, 1000, 5000, 10000]
 
-				print 'Testing ' + str(n_samps)	+ ' samples'	
+			for n_dim in n_dimensions:
+
+				print 'Testing ' + str(n_dim)	+ ' dimensions'	
 				#Make data
 				percent_hidden = 0.5
 				numb_subpops = k
-				numb_feats = 1000
-				numb_samps = n_samps
+				numb_feats = n_dim
+				numb_samps = 100
 				X, freqs, real_profiles = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps, percent_hidden)
 
 				gv.set_X_global(X)
@@ -179,7 +182,7 @@ def main():
 					for learned_profile in range(len(TZ)):
 						hidden_norms = []
 						for hidden_profile in range(len(real_profiles)):
-							hidden_norms.append(np.linalg.norm(TZ[learned_profile] - real_profiles[hidden_profile]))
+							hidden_norms.append(np.linalg.norm(TZ[learned_profile] - real_profiles[hidden_profile]) / len(TZ[0]))
 						val, idx = min((val, idx) for (idx, val) in enumerate(hidden_norms))
 						sum_of_minimums.append(val)
 						sum_of_avgs.append(np.mean(hidden_norms))
@@ -401,10 +404,11 @@ def main():
 
 
 	# pbc.plot_bar_chart(init_types, means, stds, [str(x) for x in range(min_components, max_components+1)], plot_file_name)
-	text = '#Mixing Ratio = ' + str(percent_hidden) +'\n#Dimensions =' + str(numb_feats) + '\n#Components = ' + str(k) + '\n#Iterations = ' + str(numb_of_iterations) + '\n#Random Restarts = ' + str(numb_of_iters_to_remove_local_minima) 
+	text = '#Samples = ' + str(numb_samps) + '\n#Mixing Ratio = ' + str(percent_hidden) + '\n#Components = ' + str(k) + '\n#Iterations = ' + str(numb_of_iterations) + '\n#Random Restarts = ' + str(numb_of_iters_to_remove_local_minima) 
 	# pbc.plot_line_with_text(scores_to_plot3, p_h_list, 'L2-Norm', 'Fraction Non-Zero', '../plots/norm_vs_frac_non_zero9.png', text)
 	# pbc.plot_two_lines_with_text(scores_to_plot, scores_to_plot2, p_h_list, 'L2-Norm', 'Fraction Non-Zero', '../plots/norm_vs_frac_non_zero9.png', text)
-	pbc.plot_three_lines_with_text(scores_to_plot, scores_to_plot2, scores_to_plot3, n_samples, 'L2-Norm', 'Number of Samples', '../plots/norm_vs_samples.png', text)
+	# pbc.plot_three_lines_with_text(scores_to_plot, scores_to_plot2, scores_to_plot3, n_dimensions, 'L2-Norm', 'Number of Dimensions', '../plots/norm_vs_dimensions.png', text)
+	pbc.plot_three_lines_with_text_with_xlog_scale(scores_to_plot, scores_to_plot2, scores_to_plot3, n_dimensions, 'L2-Norm', 'Number of Dimensions', '../plots/norm_vs_dimensions5.png', text)
 
 
 	print '\nDONE'

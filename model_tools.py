@@ -23,7 +23,14 @@ def init_model(init_type, numb_model_subpops, X):
 	if init_type == 'Random_Values':
 		Z = np.random.rand(numb_model_subpops, len(X[0]))
 	elif init_type == 'Random_Samples':
-		Z = X[random.sample(range(len(X)), numb_model_subpops)]
+		#if more components than samples, then add some made up samples
+		#else select some samples 
+		if len(X) < numb_model_subpops:
+			random_profiles = np.random.rand(numb_model_subpops - len(X), len(X[0]))
+			#concatenate the two
+			Z = np.concatenate((X, random_profiles), axis=0)
+		else:
+			Z = X[random.sample(range(len(X)), numb_model_subpops)]
 	elif init_type == 'PCA':
 		pca = PCA(n_components=numb_model_subpops)
 		pca.fit(X.T)
@@ -45,7 +52,7 @@ def optimize_model(TZ):
 
 	gv.set_sample_norms([-1]*len(gv.X))
 	gv.set_current_W(np.zeros((len(gv.X), len(gv.TZ))))
-	max_iters = 100
+	max_iters = 200
 	printed = 0
 	best_W = None
 	best_TZ = None
