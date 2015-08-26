@@ -65,11 +65,50 @@ def make_samps(numb_samps, subpops, freqs):
 			# print 'freqs1 shape ' + str(freqs[i][j].shape)
 			# print 'subpops1 shape ' + str(subpops[j].shape)
 			samps[i] = samps[i] + freqs[i][j]*subpops[j]
+	
+	#add some noise, divide to make it smaller
+	# noise = np.random.rand(numb_samps, len(subpops[0])) / 100.0
+	# samps = samps + noise
+
+	#need to make sure that no cell is negative
+	#cant be negative cuz the random is from 0 to 1 not -1 to 1
+	#so could remove this
+	for i in range(len(samps)):
+		for j in range(len(samps[0])):
+			if samps[i][j] < 0.0:
+				print 'There is a negative!!'
+				samps[i][j] = 0.0
+
+	return samps
+
+def make_samps_messed(numb_samps, subpops, freqs, off_by_fraction=0.0):
+
+	samps = np.zeros((numb_samps, len(subpops[0])))
+
+	for i in range(len(freqs)):
+
+		# print 'real freq ' + str(freqs[i]) 
+		messed_up_freqs = np.copy(freqs[i])
+		for j in range(len(messed_up_freqs)):
+			if messed_up_freqs[j] == 0.0:
+				continue
+			else:
+				messed_up_freqs[j] = messed_up_freqs[j] + 0.2
+			messed_up_freqs = messed_up_freqs / sum(messed_up_freqs)
+
+		# print 'messed up ' + str(messed_up_freqs)
+
+		for j in range(len(messed_up_freqs)):
+			if messed_up_freqs[j] == 0.0:
+				continue
+			else:
+				samps[i] = samps[i] + messed_up_freqs[j]*subpops[j]
 
 	
 	#add some noise, divide to make it smaller
-	noise = np.random.rand(numb_samps, len(subpops[0])) / 100.0
-	samps = samps + noise
+	# noise = np.random.rand(numb_samps, len(subpops[0])) / 100.0
+	# samps = samps + noise
+
 	#need to make sure that no cell is negative
 	#cant be negative cuz the random is from 0 to 1 not -1 to 1
 	#so could remove this
@@ -78,11 +117,7 @@ def make_samps(numb_samps, subpops, freqs):
 			if samps[i][j] < 0.0:
 				samps[i][j] = 0.0
 
-
-
 	return samps
-
-
 
 
 def make_csv(data):
@@ -114,6 +149,18 @@ def run_and_return(numb_of_subpops, numb_of_feats, numb_samps, percent_hidden):
 	#print 'freqs shape ' + str(freqs.shape)
 	samps = make_samps(numb_samps, subpops, freqs)
 	#print 'samps shape ' + str(samps.shape)
+
+
+
+	#remove zeros from freqs
+	# freqs = list(freqs)
+	new_freqs = []
+	for i in range(len(freqs)):
+		freq_list = list(freqs[i])
+		while freq_list.count(0.0) > 0:
+			freq_list.remove(0.0)
+		new_freqs.append(freq_list)
+	freqs = np.array(new_freqs)
 
 	return samps, freqs, subpops
 

@@ -70,7 +70,7 @@ def main():
 	# numb_samps = 50
 	# numb_feats = 10000
 
-	k = 40
+	k = 20
 	min_components = k
 	max_components = k
 	# numb_of_contributing_profiles = 2
@@ -108,8 +108,9 @@ def main():
 			#Make data
 			numb_subpops = k
 			numb_feats = 1000
-			numb_samps = 1000
-			X, freqs, real_profiles = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps)
+			numb_samps = 100
+			percent_hidden = 0.5
+			X, freqs, real_profiles = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps, percent_hidden)
 
 			gv.set_X_global(X)
 			gv.set_freqs_global(freqs)
