@@ -154,3 +154,59 @@ def plot_three_lines_with_text_with_xlog_scale(y_values, y2_values, y3_values, x
 	plt.savefig(save_as_name)
 	print 'Saved plot'
 
+
+
+
+def plot_visualize_learning(save_as_name, X, hidden_profiles, W, Z):
+
+
+	plt.scatter(X.T[0], X.T[1])
+
+
+	a = len(hidden_profiles)
+
+	colors = np.random.rand(a)
+	# area = np.pi * (15 * np.random.rand(a))**2 # 0 to 15 point radiuses
+	plt.scatter(hidden_profiles.T[0], hidden_profiles.T[1], s=[120]*a, c=colors, alpha=0.5)
+
+	plt.scatter(Z.T[0], Z.T[1], s=[100]*a, c=colors, alpha=0.5, marker='*')
+
+
+	plt.savefig(save_as_name)
+	print 'Saved plot'
+
+
+def plot_visualize_learning_iters(save_as_name, X, hidden_profiles, W0, W1, Z0, Z1):
+
+
+	a = len(hidden_profiles)
+	colors = np.random.rand(a)
+	fig = plt.figure(1)
+
+	plt.subplot(221)
+	plt.scatter(X.T[0], X.T[1])	
+	plt.scatter(hidden_profiles.T[0], hidden_profiles.T[1], s=[120]*a, c=colors, alpha=0.5)
+	plt.scatter(Z0.T[0], Z0.T[1], s=[100]*a, c=colors, alpha=0.5, marker='*')
+
+	plt.subplot(223)
+	plt.scatter(X.T[0], X.T[1])	
+	plt.scatter(hidden_profiles.T[0], hidden_profiles.T[1], s=[120]*a, c=colors, alpha=0.5)
+	plt.scatter(Z1.T[0], Z1.T[1], s=[100]*a, c=colors, alpha=0.5, marker='*')
+
+	plt.subplot(122)
+	plt.tick_params(
+	axis='both',          # changes apply to the x-axis
+	which='both',      # both major and minor ticks are affected
+	bottom='off',      # ticks along the bottom edge are off
+	top='off',         # ticks along the top edge are off
+	labelbottom='off',
+	right='off',
+	left='off',
+	labelleft='off') # labels along the bottom edge are off
+	plt.text(0, 0, 'Learned freqs', size='x-small')
+	plt.text(0, .1, str(W0), size='x-small')
+	plt.text(0, 0.5, 'Real freqs', size='x-small')
+	plt.text(0, .6, str(W1), size='x-small')
+
+	plt.savefig(save_as_name)
+	print 'Saved plot'

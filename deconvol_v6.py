@@ -30,11 +30,11 @@ from scipy.stats import multivariate_normal as mn
 def main():
 
 
-	k = 20
+	k = 3
 	min_components = k
 	max_components = k
 	numb_of_iterations = 1
-	numb_of_iters_to_remove_local_minima = 2
+	numb_of_iters_to_remove_local_minima = 1
 	init_types = ['Random_Samples']
 
 	start = time.time()
@@ -46,19 +46,19 @@ def main():
 
 		#Make data
 		numb_subpops = k
-		numb_feats = 1000
-		numb_samps = 100
-		percent_hidden = 0.5
-		X, freqs, real_profiles = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps, percent_hidden)
+		numb_feats = 2
+		numb_samps = 10
+		percent_hidden = 0.8
+		X, freqs, real_profiles, real_freqs = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps, percent_hidden)
 
 		gv.set_X_global(X)
 		gv.set_freqs_global(freqs)
 
-		print X.shape
-		print freqs.shape
+		print 'X shape ' + str(X.shape)
+		print 'W len ' + str(len(freqs))
+		# print 'Proportions shape ' + str(freqs.shape)
 		# print 'Example freq ' + str(freqs[0])
-		print real_profiles.shape
-
+		print 'Real TZ shape ' + str(real_profiles.shape)
 
 		#for each initialization type
 		for init_type in range(len(init_types)):
@@ -71,10 +71,14 @@ def main():
 
 				#Initializing model
 				TZ = mt.init_model(init_types[init_type], numb_subpops, X)
+				initial_TZ = np.copy(TZ)
+				# print 'W init'
+				# print W
+				# gv.set_current_W(W)
 				gv.set_current_TZ(TZ)
 				print 'Optimizing model..'
-				W, TZ = mt.optimize_model_with_loglike(TZ)
-
+				# W, TZ = mt.optimize_model_with_loglike(TZ)
+				W, TZ = mt.optimize_model()
 				X_hat = np.dot(W, TZ)
 				norm = np.linalg.norm(X - X_hat)
 				if norm < best_norm or best_norm == -1:
@@ -83,25 +87,38 @@ def main():
 					best_TZ = TZ
 
 			W = best_W
-			#print W
 			TZ = best_TZ
-			X_hat = np.dot(W, TZ)
+			# X_hat = np.dot(W, TZ)
 
 
-		for learned_profile in range(len(TZ)):
-			hidden_norms = []
-			for hidden_profile in range(len(real_profiles)):
-				hidden_norms.append(np.linalg.norm(TZ[learned_profile] - real_profiles[hidden_profile]))
-			val, idx = min((val, idx) for (idx, val) in enumerate(hidden_norms))
-			print 'Predicted k ' + str(learned_profile) + ' avg norm with hidden profiles ' + str(np.mean(hidden_norms)) + ' min norm ' + str(val) + ' with real profile' + str(idx)
+		print '\nEvaluate Performance'
+		indexes = mt.match_profiles(TZ, real_profiles)
+
+		# for learned_profile in range(len(TZ)):
+		# 	hidden_norms = []
+		# 	for hidden_profile in range(len(real_profiles)):
+		# 		hidden_norms.append(np.linalg.norm(TZ[learned_profile] - real_profiles[hidden_profile]))
+		# 	val, idx = min((val, idx) for (idx, val) in enumerate(hidden_norms))
+		# 	print 'Predicted k ' + str(learned_profile) + ' avg norm with hidden profiles ' + str(np.mean(hidden_norms)) + ' min norm ' + str(val) + ' with real profile' + str(idx)
 
 
-		#LIKELIHODD
-		# X=WZ
-		# log likelihood = sum( ln (P(x|x_hat, cov))
-		# cov = []
-		# for 
+		print 'LEARNED'
+		for list1 in TZ:
+			print str(['%.2f' % elem for elem in list1])
+		print 'REAL'
+		for list1 in real_profiles[indexes]:
+			print str(['%.2f' % elem for elem in list1])
+		print 'W'
+		for list1 in W:
+			print str(['%.2f' % elem for elem in list1])
+		print 'Real freqs'
+		r_f = real_freqs.T[indexes].T
+		for list1 in r_f:
+			print str(['%.2f' % elem for elem in list1])
 
+
+
+	pbc.plot_visualize_learning_iters('../plots/visualize_learning/first.png', X, real_profiles[indexes], W, real_freqs.T[indexes].T, initial_TZ, TZ)
 
 
 	print '\nDONE'

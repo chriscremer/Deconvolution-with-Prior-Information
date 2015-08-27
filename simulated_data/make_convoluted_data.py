@@ -160,9 +160,24 @@ def run_and_return(numb_of_subpops, numb_of_feats, numb_samps, percent_hidden):
 		while freq_list.count(0.0) > 0:
 			freq_list.remove(0.0)
 		new_freqs.append(freq_list)
-	freqs = np.array(new_freqs)
 
-	return samps, freqs, subpops
+
+	# print 'list'
+	# for i in new_freqs:
+	# 	print i
+
+
+
+	# #how is this possible, not all rows are the same length
+	# freqs = np.array(new_freqs)
+
+
+	# print 'array'
+	# for i in freqs:
+	# 	print i
+
+
+	return samps, new_freqs, subpops, freqs
 
 
 

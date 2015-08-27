@@ -329,6 +329,8 @@ def doWork_NEW(samp_index):
 
 		for i in range(n_profiles):
 			v = current_v.copy()
+			if v[i] > 0:
+				continue
 			v[i] = f
 			v_scaled = v / sum(v)
 			X_hat = np.dot(gv.TZ.T, v_scaled)

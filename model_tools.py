@@ -46,13 +46,23 @@ def init_model(init_type, numb_model_subpops, X):
 	else:
 		print 'WHAT INITIALIZATION IS THIS?'		
 
-	T = np.identity(len(Z))
-	TZ = np.dot(T, Z)
+	# T = np.identity(len(Z))
+	# TZ = np.dot(T, Z)
 
-	return TZ
+	#init W
+	# W = []
+	# n_profiles = len(Z)
+	# for i in range(len(X)):
+	# 	# weight_vector = np.zeros(n_profiles)
+	# 	w_i = [0]*n_profiles
+	# 	w_i[i%n_profiles] = 1.0
+	# 	W.append(w_i)
+	# W = np.array(W)
+
+	return Z
 
 
-def optimize_model(TZ):
+def optimize_model():
 
 	gv.set_sample_norms([-1]*len(gv.X))
 	gv.set_current_W(np.zeros((len(gv.X), len(gv.TZ))))
@@ -78,25 +88,30 @@ def optimize_model(TZ):
 		#this is the new way
 		W = wt.select_w_parallel_NEW()
 		gv.set_current_W(W)
-		X_hat = np.dot(W, TZ)
+		X_hat = np.dot(gv.W, gv.TZ)
 		dif = gv.X - X_hat
 		norm = np.linalg.norm(dif)
 		gv.norms = np.linalg.norm(dif, axis=1)
 
+
 		#print 'optimizig TZ'
-		TZ = np.dot(pinv(np.dot(W.T,W)), np.dot(W.T, gv.X))
+		TZ = np.dot(pinv(np.dot(gv.W.T,gv.W)), np.dot(gv.W.T, gv.X))
 		gv.set_current_TZ(TZ)
-		new_X_hat = np.dot(W, TZ)
+		new_X_hat = np.dot(gv.W, gv.TZ)
 		dif = gv.X - new_X_hat
 		new_norm = np.linalg.norm(dif)
 		gv.norms = np.linalg.norm(dif, axis=1)
 
-		print 'Opt ' + str(itera) + ' norm after W ' + str(norm) + ' norm after Z ' + str(new_norm)
+
+
+
+
+		print 'Opt ' + str(itera) + ' norm after W ' + str(norm)  + ' norm after Z ' + str(new_norm) 
 
 		if best_norm > new_norm or best_norm == -1:
 			best_norm = new_norm
-			best_W = W
-			best_TZ = TZ
+			best_W = gv.W
+			best_TZ = gv.TZ
 
 		if norm == new_norm:
 			print '# iters until optimized= ' + str(itera)
@@ -377,3 +392,37 @@ def optimize_model_with_ls(TZ):
 	if printed == 0:
 		print '# iters went to limit: ' + str(max_iters)
 	return best_W, best_TZ
+
+
+
+def match_profiles(TZ, real_profiles):
+
+	#Get the norms between all pairs
+	norm_matrix = []
+	for learned_profile in range(len(TZ)):
+		this_profile = []
+		for hidden_profile in range(len(real_profiles)):
+			this_profile.append(np.linalg.norm(TZ[learned_profile] - real_profiles[hidden_profile]))
+		norm_matrix.append(this_profile)
+
+	for list1 in norm_matrix:
+		print str(['%.2f' % elem for elem in list1])
+
+	#Hungarian Algorithm
+	from munkres import Munkres, print_matrix
+	m = Munkres()
+	indexes = m.compute(norm_matrix)
+	indexes2 = [x[1] for x in indexes]
+	print indexes2
+	# print_matrix(norm_matrix, msg='Lowest cost through this matrix:')
+	total = 0
+	for row, column in indexes:
+	    value = norm_matrix[row][column]
+	    value2 = np.linalg.norm(TZ[row] - real_profiles[column])
+	    total += value
+	    print '(%d, %d) -> %f' % (row, column, value2)
+	print 'total cost: %f' % total
+
+
+	return indexes2
+
