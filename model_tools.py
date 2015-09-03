@@ -152,11 +152,18 @@ def optimize_model():
 
 		#print 'optimizig TZ'
 		#TZ = np.dot(pinv(np.dot(gv.W.T,gv.W)), np.dot(gv.W.T, gv.X))
+		TZ = []
 		for d in range(len(gv.X.T)):
-			TZ_d = 
-		TZ_x = np.reshape(nnls(W, gv.X.T[0])[0], (3,1))
-		TZ_y = np.reshape(nnls(W, gv.X.T[1])[0], (3,1))
-		TZ = np.concatenate((TZ_x, TZ_y), axis=1)
+			# TZ_d = np.reshape(nnls(W, gv.X.T[d])[0], (len(gv.TZ),1))
+			TZ_d = nnls(W, gv.X.T[d])[0]
+			TZ.append(TZ_d)
+		TZ = np.array(TZ).T
+		print TZ.shape
+
+
+		# TZ_x = np.reshape(nnls(W, gv.X.T[0])[0], (3,1))
+		# TZ_y = np.reshape(nnls(W, gv.X.T[1])[0], (3,1))
+		# TZ = np.concatenate((TZ_x, TZ_y), axis=1)
 
 		gv.set_current_TZ(TZ)
 		new_X_hat = np.dot(gv.W, gv.TZ)
