@@ -193,6 +193,9 @@ def plot_visualize_learning_iters(save_as_name, X, hidden_profiles, W0, W1, Z0, 
 	plt.scatter(hidden_profiles.T[0], hidden_profiles.T[1], s=[120]*a, c=colors, alpha=0.5)
 	plt.scatter(Z1.T[0], Z1.T[1], s=[100]*a, c=colors, alpha=0.5, marker='*')
 
+	for i in range(len(X)):
+		plt.annotate(str(i), xy=X[i], size=10)
+
 	plt.subplot(122)
 	plt.tick_params(
 	axis='both',          # changes apply to the x-axis
@@ -207,6 +210,8 @@ def plot_visualize_learning_iters(save_as_name, X, hidden_profiles, W0, W1, Z0, 
 	plt.text(0, .1, str(W0), size='x-small')
 	plt.text(0, 0.5, 'Real freqs', size='x-small')
 	plt.text(0, .6, str(W1), size='x-small')
+
+
 
 	plt.savefig(save_as_name)
 	print 'Saved plot'

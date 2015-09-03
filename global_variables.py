@@ -6,10 +6,10 @@ def set_X_global(para):
 	X = para
 
 
-# def set_Ws_global(para):
+def set_Ws_global(para):
 
-# 	global Ws
-# 	Ws = para
+	global Ws
+	Ws = para
 
 
 def set_current_TZ(para):

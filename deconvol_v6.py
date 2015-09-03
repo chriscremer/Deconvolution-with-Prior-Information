@@ -51,6 +51,12 @@ def main():
 		percent_hidden = 0.8
 		X, freqs, real_profiles, real_freqs = make_convoluted_data.run_and_return(numb_subpops, numb_feats, numb_samps, percent_hidden)
 
+
+		#this for testing the all permutations way
+		new_freqs = wt.same_numb_of_entries(k, freqs)
+		possible_Ws = wt.get_possible_Ws(new_freqs, allow_combos=False)
+		gv.set_Ws_global(possible_Ws)
+
 		gv.set_X_global(X)
 		gv.set_freqs_global(freqs)
 
@@ -71,6 +77,12 @@ def main():
 
 				#Initializing model
 				TZ = mt.init_model(init_types[init_type], numb_subpops, X)
+				# print TZ.shape
+
+				#just to show it gets perfect
+				# TZ = real_profiles
+				# print TZ.shape
+
 				initial_TZ = np.copy(TZ)
 				# print 'W init'
 				# print W
@@ -85,6 +97,7 @@ def main():
 					best_norm = norm
 					best_W = W
 					best_TZ = TZ
+					best_init = initial_TZ
 
 			W = best_W
 			TZ = best_TZ
@@ -118,7 +131,7 @@ def main():
 
 
 
-	pbc.plot_visualize_learning_iters('../plots/visualize_learning/first.png', X, real_profiles[indexes], W, real_freqs.T[indexes].T, initial_TZ, TZ)
+	pbc.plot_visualize_learning_iters('../plots/visualize_learning/nnls.png', X, real_profiles[indexes], W, real_freqs.T[indexes].T, best_init, TZ)
 
 
 	print '\nDONE'

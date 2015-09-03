@@ -6,6 +6,8 @@ from sklearn.decomposition import PCA
 from sklearn.decomposition import NMF
 from sklearn.decomposition import FastICA
 
+from sklearn.linear_model import Lasso
+
 from sklearn.covariance import EmpiricalCovariance as ec
 
 from numpy.linalg import inv
@@ -13,6 +15,7 @@ from numpy.linalg import pinv
 from numpy.linalg import det
 
 from scipy.stats import multivariate_normal as mn
+from scipy.optimize import nnls
 
 import weight_tools as wt
 
@@ -82,11 +85,64 @@ def optimize_model():
 		# W = wt.select_w_parallel()
 
 		#this is the non-constrained way
-		# W = np.dot(pinv(np.dot(TZ,TZ.T)), np.dot(TZ, gv.X.T))
+		# W = np.dot(pinv(np.dot(gv.TZ,gv.TZ.T)), np.dot(gv.TZ, gv.X.T))
 		# W = W.T
 
 		#this is the new way
-		W = wt.select_w_parallel_NEW()
+		# W = wt.select_w_parallel_NEW()
+		# print np.array(W).shape
+
+		#LASSO
+		# problem since ... i tried working it out. aaahh
+		# W = []
+		# for i in range(len(gv.X)):
+		# 	model = Lasso()
+		# 	model.fit(gv.TZ.T, gv.X[i].T)
+		# 	W_i = model.coef_
+		# 	W.append(W_i)
+		# W = np.array(W)
+		# print np.array(W).shape
+	
+		#My new least squares but Wi done individually. 
+		# W = []
+		# for i in range(len(gv.X)):
+		# 	# Wi = (XiZt)*(ZZt)-1
+		# 	W_i = np.dot(np.dot(gv.X[i], gv.TZ.T), pinv(np.dot(gv.TZ, gv.TZ.T))) 
+		# 	W.append(W_i)
+		# W = np.array(W)	
+
+		#Same but with L2 reg
+		# W = []
+		# for i in range(len(gv.X)):
+		# 	# Wi = (XiZt)*(ZZt+I)-1
+		# 	W_i = np.dot(np.dot(gv.X[i], gv.TZ.T), pinv(np.dot(gv.TZ, gv.TZ.T) + np.identity(len(gv.TZ)))) 
+		# 	W.append(W_i)
+		# W = np.array(W)
+
+		# nnls
+		W = []
+		for i in range(len(gv.W)):
+			W_i = nnls(gv.TZ.T, gv.X[i])[0]
+			W.append(W_i)
+		W = np.array(W)
+		
+		#if no assignments to a profile, give it the one with the worst norm
+		for i in range(len(W.T)):
+			if sum(W.T[i]) == 0:
+				X_hat = np.dot(W, gv.TZ)
+				dif = gv.X - X_hat
+				norms = np.linalg.norm(dif, axis=1)
+				worst_sample = list(norms).index(max(norms))
+				for j in range(len(W[worst_sample])):
+					if j == i:
+						W[worst_sample][j] = 1.0
+					else:
+						W[worst_sample][j] = 0.0
+
+		for i in range(len(W.T)):
+			if sum(W.T[i]) == 0:
+				print 'ZERO'
+
 		gv.set_current_W(W)
 		X_hat = np.dot(gv.W, gv.TZ)
 		dif = gv.X - X_hat
@@ -95,7 +151,13 @@ def optimize_model():
 
 
 		#print 'optimizig TZ'
-		TZ = np.dot(pinv(np.dot(gv.W.T,gv.W)), np.dot(gv.W.T, gv.X))
+		#TZ = np.dot(pinv(np.dot(gv.W.T,gv.W)), np.dot(gv.W.T, gv.X))
+		for d in range(len(gv.X.T)):
+			TZ_d = 
+		TZ_x = np.reshape(nnls(W, gv.X.T[0])[0], (3,1))
+		TZ_y = np.reshape(nnls(W, gv.X.T[1])[0], (3,1))
+		TZ = np.concatenate((TZ_x, TZ_y), axis=1)
+
 		gv.set_current_TZ(TZ)
 		new_X_hat = np.dot(gv.W, gv.TZ)
 		dif = gv.X - new_X_hat
@@ -113,7 +175,7 @@ def optimize_model():
 			best_W = gv.W
 			best_TZ = gv.TZ
 
-		if norm == new_norm:
+		if (norm - new_norm) < .0000000001:
 			print '# iters until optimized= ' + str(itera)
 			printed = 1
 			break
