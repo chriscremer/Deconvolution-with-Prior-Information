@@ -30,7 +30,7 @@ from scipy.stats import multivariate_normal as mn
 def main():
 
 
-	k = 3
+	k = 5
 	min_components = k
 	max_components = k
 	numb_of_iterations = 1

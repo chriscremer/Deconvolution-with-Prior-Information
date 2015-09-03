@@ -127,17 +127,25 @@ def optimize_model():
 		W = np.array(W)
 		
 		#if no assignments to a profile, give it the one with the worst norm
+		#numb of zero profiles found
+		count = 0
+		calculated = 0
 		for i in range(len(W.T)):
 			if sum(W.T[i]) == 0:
-				X_hat = np.dot(W, gv.TZ)
-				dif = gv.X - X_hat
-				norms = np.linalg.norm(dif, axis=1)
-				worst_sample = list(norms).index(max(norms))
-				for j in range(len(W[worst_sample])):
+				if calculated == 0:
+					calculated = 1
+					X_hat = np.dot(W, gv.TZ)
+					dif = gv.X - X_hat
+					norms = np.linalg.norm(dif, axis=1)
+					#descending order
+					sort_indexes = np.argsort(norms)[::-1]
+					# worst_sample = list(norms).index(max(norms))
+				for j in range(len(W[sort_indexes[count]])):
 					if j == i:
-						W[worst_sample][j] = 1.0
+						W[sort_indexes[count]][j] = 1.0
 					else:
-						W[worst_sample][j] = 0.0
+						W[sort_indexes[count]][j] = 0.0
+				count += 1
 
 		for i in range(len(W.T)):
 			if sum(W.T[i]) == 0:
@@ -158,7 +166,7 @@ def optimize_model():
 			TZ_d = nnls(W, gv.X.T[d])[0]
 			TZ.append(TZ_d)
 		TZ = np.array(TZ).T
-		print TZ.shape
+		# print TZ.shape
 
 
 		# TZ_x = np.reshape(nnls(W, gv.X.T[0])[0], (3,1))
