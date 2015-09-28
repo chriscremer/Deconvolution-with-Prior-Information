@@ -190,7 +190,7 @@ def optimize_model():
 			best_W = gv.W
 			best_TZ = gv.TZ
 
-		if (norm - new_norm) < .0000000001:
+		if (norm - new_norm) < .0001:
 			print '# iters until optimized= ' + str(itera)
 			printed = 1
 			break
@@ -203,6 +203,86 @@ def optimize_model():
 
 
 
+def optimize_model_nnls():
+
+	gv.set_sample_norms([-1]*len(gv.X))
+	gv.set_current_W(np.zeros((len(gv.X), len(gv.TZ))))
+	max_iters = 200
+	printed = 0
+	best_W = None
+	best_TZ = None
+	best_norm = -1
+	for itera in range(max_iters):
+		# nnls
+		W = []
+		for i in range(len(gv.W)):
+			W_i = nnls(gv.TZ.T, gv.X[i])[0]
+			W.append(W_i)
+		W = np.array(W)
+		
+		#if no assignments to a profile, give it the one with the worst norm
+		#numb of zero profiles found
+		count = 0
+		calculated = 0
+		for i in range(len(W.T)):
+			if sum(W.T[i]) == 0:
+				if calculated == 0:
+					calculated = 1
+					X_hat = np.dot(W, gv.TZ)
+					dif = gv.X - X_hat
+					norms = np.linalg.norm(dif, axis=1)
+					#descending order
+					sort_indexes = np.argsort(norms)[::-1]
+					# worst_sample = list(norms).index(max(norms))
+				for j in range(len(W[sort_indexes[count]])):
+					if j == i:
+						W[sort_indexes[count]][j] = 1.0
+					else:
+						W[sort_indexes[count]][j] = 0.0
+				count += 1
+
+		for i in range(len(W.T)):
+			if sum(W.T[i]) == 0:
+				print 'ZERO'
+
+		gv.set_current_W(W)
+		X_hat = np.dot(gv.W, gv.TZ)
+		dif = gv.X - X_hat
+		norm = np.linalg.norm(dif)
+		gv.norms = np.linalg.norm(dif, axis=1)
+
+
+		#print 'optimizig TZ'
+		#TZ = np.dot(pinv(np.dot(gv.W.T,gv.W)), np.dot(gv.W.T, gv.X))
+		TZ = []
+		for d in range(len(gv.X.T)):
+			# TZ_d = np.reshape(nnls(W, gv.X.T[d])[0], (len(gv.TZ),1))
+			TZ_d = nnls(W, gv.X.T[d])[0]
+			TZ.append(TZ_d)
+		TZ = np.array(TZ).T
+
+		gv.set_current_TZ(TZ)
+		new_X_hat = np.dot(gv.W, gv.TZ)
+		dif = gv.X - new_X_hat
+		new_norm = np.linalg.norm(dif)
+		gv.norms = np.linalg.norm(dif, axis=1)
+
+		print 'Opt ' + str(itera) + ' norm after W ' + str(norm)  + ' norm after Z ' + str(new_norm) 
+
+		if best_norm > new_norm or best_norm == -1:
+			best_norm = new_norm
+			best_W = gv.W
+			best_TZ = gv.TZ
+
+		if (norm - new_norm) < .0001:
+			print '# iters until optimized= ' + str(itera)
+			printed = 1
+			break
+
+		
+	if printed == 0:
+		print '# iters went to limit: ' + str(max_iters)
+	return best_W, best_TZ
 
 
 def optimize_model_with_loglike(TZ):

@@ -157,7 +157,7 @@ def plot_three_lines_with_text_with_xlog_scale(y_values, y2_values, y3_values, x
 
 
 
-def plot_visualize_learning(save_as_name, X, hidden_profiles, W, Z):
+def plot_visualize_learning(save_as_name, X, hidden_profiles, Z):
 
 
 	plt.scatter(X.T[0], X.T[1])

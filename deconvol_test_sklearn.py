@@ -76,6 +76,7 @@ def main():
 			for try1 in range(numb_of_iters_to_remove_local_minima):
 
 				#Initializing model
+
 				TZ = mt.init_model(init_types[init_type], numb_subpops, X)
 				# print TZ.shape
 
@@ -90,22 +91,49 @@ def main():
 				gv.set_current_TZ(TZ)
 				print 'Optimizing model..'
 				# W, TZ = mt.optimize_model_with_loglike(TZ)
-				W, TZ = mt.optimize_model()
-				X_hat = np.dot(W, TZ)
-				norm = np.linalg.norm(X - X_hat)
-				if norm < best_norm or best_norm == -1:
-					best_norm = norm
-					best_W = W
-					best_TZ = TZ
-					best_init = initial_TZ
 
-			W = best_W
-			TZ = best_TZ
+
+
+				# W, TZ = mt.optimize_model()
+
+
+				# from sklearn.decomposition import FactorAnalysis
+				# fa = FactorAnalysis(n_components=3)
+
+				# from sklearn.decomposition import FastICA
+				# fa = FastICA(n_components=3)
+
+				from sklearn.decomposition import NMF
+				fa = NMF(n_components=3)
+
+				# from sklearn.decomposition import PCA
+				# fa = PCA(n_components=3)
+
+
+				fa.fit(X)
+				Z = fa.components_
+
+				print Z.shape
+
+
+
+			# 	X_hat = np.dot(W, TZ)
+			# 	norm = np.linalg.norm(X - X_hat)
+			# 	if norm < best_norm or best_norm == -1:
+			# 		best_norm = norm
+			# 		best_W = W
+			# 		best_TZ = TZ
+			# 		best_init = initial_TZ
+
+			# W = best_W
+			# TZ = best_TZ
+
+
 			# X_hat = np.dot(W, TZ)
 
 
 		print '\nEvaluate Performance'
-		indexes = mt.match_profiles(TZ, real_profiles)
+		indexes = mt.match_profiles(Z, real_profiles)
 
 		# for learned_profile in range(len(TZ)):
 		# 	hidden_norms = []
@@ -116,22 +144,24 @@ def main():
 
 
 		print 'LEARNED'
-		for list1 in TZ:
+		for list1 in Z:
 			print str(['%.2f' % elem for elem in list1])
 		print 'REAL'
 		for list1 in real_profiles[indexes]:
 			print str(['%.2f' % elem for elem in list1])
-		print 'W'
-		for list1 in W:
-			print str(['%.2f' % elem for elem in list1])
-		print 'Real freqs'
-		r_f = real_freqs.T[indexes].T
-		for list1 in r_f:
-			print str(['%.2f' % elem for elem in list1])
+		# print 'W'
+		# for list1 in W:
+		# 	print str(['%.2f' % elem for elem in list1])
+		# print 'Real freqs'
+		# r_f = real_freqs.T[indexes].T
+		# for list1 in r_f:
+		# 	print str(['%.2f' % elem for elem in list1])
 
 
 
-	pbc.plot_visualize_learning_iters('../plots/visualize_learning/nnls.png', X, real_profiles[indexes], W, real_freqs.T[indexes].T, best_init, TZ)
+	# pbc.plot_visualize_learning_iters('../plots/visualize_learning/temppp.png', X, real_profiles[indexes], [], real_freqs.T[indexes].T, initial_TZ, TZ)
+
+	pbc.plot_visualize_learning('../plots/visualize_learning/temppp.png', X, real_profiles[indexes], Z)
 
 
 	print '\nDONE'
