@@ -22,173 +22,330 @@ import make_real_simulated_data as mrsd
 from sklearn.decomposition import NMF
 
 from deconvol_model import Deconvol
+from deconvol_model import DIFI_strict
+from deconvol_model import DIFI_w_deviates
+from deconvol_model import Deconvol_normalized
+from deconvol_model import DIFI_strict_top5
+from deconvol_model import DIFI_deviate_top5
+from deconvol_model import DIFI_nmf_deviate_top5
+
+
+
 
 
 if __name__ == "__main__":
 
+	models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5']
+	# models = ['Deconvol_normalized', 'DIFI_strict_top5', 'DIFI_deviate_top5', 'negative_control', 'negative_control2',]
+	# models = ['DIFI_strict', 'DIFI_w_deviates', 'Deconvol_normalized', 'DIFI_strict_top5', 'negative_control']
+	# models = ['nmf', 'nnls', 'DIFI_strict', 'DIFI_w_deviates']
+	# models = ['']
+	k = 20
+	n_rand_inits =1
 
 
-	models = ['nmf', 'nnls']
-	k = 10
+	noise_amount = [0.0, .2, .4, .6, .8, 1.]
+	# noise_amount = [0.0, .5, 1.]
+	# noise_amount = [0.0, 1.]
+
+	average_over_x_iters = 10
+
 
 	W_L1_error = [[] for x in models]
 	Z_L1_error = [[] for x in models]
-	noise_amount = [0.0, .2, .4, .6, .8, 1.]
-	for noise1 in noise_amount:
-		print '\n\n\nNoise ' + str(noise1)
-		#Make data
-		print 'Making data...'
-		subpops, fractions, X = mrsd.make_and_return(n_subpops=k, n_samps=100, probability_of_zero=.7, noise=noise1)
-		print 'X ' + str(X[0][:10])
-		print 'subpops ' + str(subpops[0][:10])
-		print 'fractions ' + str(fractions[0])
-		print 'Preprocessing ...'
-		#remove bottom 25% of lowest mean expressed genes
-		genes_mean_exps = [np.mean(x) for x in X.T]
-		#largest to smallest
-		sorted_indexes = np.argsort(genes_mean_exps)[::-1]
-		#keep top 75%
-		sorted_indexes = sorted_indexes[:len(sorted_indexes)*.8]
-		back_in_order = sorted(sorted_indexes)
-		X = X.T[back_in_order].T
-		subpops = subpops.T[back_in_order].T
-		print X.shape
-		print 'X ' + str(X[0][:10])
-		print 'subpops ' + str(subpops[0][:10])
+	results_W = []
+	results_Z = []
 
-		#scale by mean
-		mean_list = [np.mean(x) for x in X.T]
-		for gene in range(len(X.T)):
-			X.T[gene] = X.T[gene]/mean_list[gene]
-		#scale subpops too
-		for gene in range(len(subpops.T)):
-			subpops.T[gene] = subpops.T[gene]/mean_list[gene]
-		print 'X ' + str(X[0][:10])
-		print 'subpops ' + str(subpops[0][:10])
+	for iter_to_avg in range(average_over_x_iters):
 
-		#remove bottom 25% of lowest var expressed genes
-		genes_var_exps = [np.std(x) for x in X.T]
-		#largest to smallest
-		sorted_indexes = np.argsort(genes_var_exps)[::-1]
-		#keep top 75%
-		sorted_indexes = sorted_indexes[:len(sorted_indexes)*.1]
-		back_in_order = sorted(sorted_indexes)
-		X = X.T[back_in_order].T
-		subpops = subpops.T[back_in_order].T
-		print X.shape
-		print 'X ' + str(X[0][:10])
-		print 'subpops ' + str(subpops[0][:10])
+		for noise1 in noise_amount:
+			print '\n\n\nIter ' + str(iter_to_avg)
+			print 'Noise ' + str(noise1)
+			#Make data
+			print 'Making data...'
+			n_samps = 40
+			p_of_zero=.7
+			tol=1e-1
+			subpops, fractions, X = mrsd.make_and_return(n_subpops=k, n_samps=n_samps, probability_of_zero=p_of_zero, noise=noise1)
+			# print 'X ' + str(X[0][:10])
+			# print 'subpops ' + str(subpops[0][:10])
+			# print 'fractions ' + str(fractions[0])
+			# print 'Preprocessing ...'
+			#remove bottom 25% of lowest mean expressed genes
+			genes_mean_exps = [np.mean(x) for x in X.T]
+			#largest to smallest
+			sorted_indexes = np.argsort(genes_mean_exps)[::-1]
+			#keep top 75%
+			sorted_indexes = sorted_indexes[:len(sorted_indexes)*.5]
+			back_in_order = sorted(sorted_indexes)
+			X = X.T[back_in_order].T
+			subpops = subpops.T[back_in_order].T
+			print X.shape
+			# print 'X ' + str(X[0][:10])
+			# print 'subpops ' + str(subpops[0][:10])
 
+			#scale by mean
+			mean_list = [np.mean(x) for x in X.T]
+			for gene in range(len(X.T)):
+				X.T[gene] = X.T[gene]/mean_list[gene]
+			#scale subpops too
+			for gene in range(len(subpops.T)):
+				subpops.T[gene] = subpops.T[gene]/mean_list[gene]
+			# print 'X ' + str(X[0][:10])
+			# print 'subpops ' + str(subpops[0][:10])
 
-
-		# X_minus_low_genes = []
-		# for gene in range(len(X.T)):
-		# 	if np.mean(X.T[gene]) > .5:
-		# 		X_minus_low_genes.append(X.T[gene])
-		# X = np.array(X_minus_low_genes).T
-		# print X.shape
-
-		# for gene in range(len(X.T)):
-		# 	X.T[gene] = (X.T[gene])/np.mean(X.T[gene])
-
-		# X_minus_low_var_genes = []
-		# for gene in range(len(X.T)):
-		# 	if np.std(X.T[gene]) > .5:
-		# 		X_minus_low_var_genes.append(X.T[gene])
-		# X = np.array(X_minus_low_var_genes).T
-		# print X.shape
-		
-
-		for model in range(len(models)):
-
-			#Select model
-			if model == 0:
-
-				print 'NMF'
-				decomposer = NMF(n_components=k, sparseness='components', max_iter=1000, tol=.001)
-				decomposer.fit(X)
-				W = decomposer.transform(X)
-				Z = decomposer.components_ 
-				print 'Z shape ' + str(Z.shape)
-
-			if model == 1:
-
-				print 'NNLS'
-				decomposer = Deconvol(n_components=k, rand_inits=1)
-				decomposer.fit(X)
-				W = decomposer.transform(X)
-				Z = decomposer.components_ 
-				print 'Z shape ' + str(Z.shape)
-
-			#scale W for each sample so that sum = 1
-			for i in range(len(W)):
-				W[i] = W[i]/sum(W[i])
-
-			print 'Matching...'
-			#Hungarian Algorithm
-			norm_matrix = []
-			for learned_profile in range(len(Z)):
-				this_samp = []
-				for real_profile in range(len(subpops)):
-					# this_samp.append(np.linalg.norm(Z[learned_profile] - subpops[real_profile]))
-					# print 'Learned ' + str(learned_profile) + ' ' + str(Z[learned_profile][:6])
-					# print 'Real ' + str(real_profile) + ' ' + str(subpops[real_profile][:6])
-					this_samp.append(sum(abs(Z[learned_profile] - subpops[real_profile])))
-				norm_matrix.append(this_samp)
-			# for list1 in norm_matrix:
-			# 	print str(['%.2f' % elem for elem in list1])
-			from munkres import Munkres, print_matrix
-			m = Munkres()
-			indexes = m.compute(norm_matrix)
-			indexes2 = [x[1] for x in indexes]
-			print indexes2
-			# print_matrix(norm_matrix, msg='Lowest cost through this matrix:')
-			total = 0
-			for row, column in indexes:
-				value = norm_matrix[row][column]
-				# value2 = np.linalg.norm(TZ[row] - real_profiles[column])
-				total += value
-				print '(%d, %d) -> %f' % (row, column, value)
-			print 'total cost: %f' % total
+			#remove bottom 25% of lowest var expressed genes
+			genes_var_exps = [np.std(x) for x in X.T]
+			#largest to smallest
+			sorted_indexes = np.argsort(genes_var_exps)[::-1]
+			#keep top 75%
+			sorted_indexes = sorted_indexes[:len(sorted_indexes)*.03]
+			back_in_order = sorted(sorted_indexes)
+			X = X.T[back_in_order].T
+			subpops = subpops.T[back_in_order].T
+			print X.shape
+			# print 'X ' + str(X[0][:10])
+			# print 'subpops ' + str(subpops[0][:10])
 
 
-			# for learned_profile in range(len(Z)):
-			# 	for real_profile in range(len(subpops)):
-			# 		print '(%d, %d) -> %f' % (learned_profile, real_profile, norm_matrix[learned_profile][real_profile])
 
-			# print 'Fraction: ' + str(fractions[0]) + ' W ' + str(W[0])
-			# print 'Fraction: ' + str(fractions[1]) + ' W ' + str(W[1])
+			# X_minus_low_genes = []
+			# for gene in range(len(X.T)):
+			# 	if np.mean(X.T[gene]) > .5:
+			# 		X_minus_low_genes.append(X.T[gene])
+			# X = np.array(X_minus_low_genes).T
+			# print X.shape
 
-			# W = W.T[indexes2].T
-			rearranged_fractions = fractions.T[indexes2].T
+			# for gene in range(len(X.T)):
+			# 	X.T[gene] = (X.T[gene])/np.mean(X.T[gene])
 
-			# print 'Fraction: ' + str(rearranged_fractions[0]) + ' W ' + str(W[0])
-			# print 'Fraction: ' + str(rearranged_fractions[1]) + ' W ' + str(W[1])
+			# X_minus_low_var_genes = []
+			# for gene in range(len(X.T)):
+			# 	if np.std(X.T[gene]) > .5:
+			# 		X_minus_low_var_genes.append(X.T[gene])
+			# X = np.array(X_minus_low_var_genes).T
+			# print X.shape
+			
 
-			W_error = sum(sum(abs(rearranged_fractions - W)))
+			for model in range(len(models)):
 
-			W_L1_error[model].append(W_error)
+				#Select model
+				if models[model] == 'nmf':
 
-			print 'Error = ' + str(W_error)
+					print 'NMF'
+					# decomposer = NMF(n_components=k, sparseness='components', max_iter=1000, tol=.001)
+					decomposer = NMF(n_components=k)
+					decomposer.fit(X)
+					W = decomposer.transform(X)
+					Z = decomposer.components_ 
+					# print 'Z shape ' + str(Z.shape)
 
+				if models[model] == 'nnls':
+
+					print 'NNLS'
+					decomposer = Deconvol(n_components=k)
+					decomposer.fit(X)
+					W = decomposer.transform(X)
+					Z = decomposer.components_ 
+					# print 'Z shape ' + str(Z.shape)
+
+				if models[model] == 'DIFI_strict':
+
+					print 'DIFI_strict'
+					decomposer = DIFI_strict(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					decomposer.fit(X, fractions)
+					W = decomposer.transform(X)
+					Z = decomposer.components_ 
+					# print 'Z shape ' + str(Z.shape)
+
+
+				if models[model] == 'DIFI_w_deviates':
+					print 'DIFI_w_deviate'
+					decomposer = DIFI_w_deviates(n_components=k)
+					decomposer.fit(X, fractions)
+					W = decomposer.transform(X)
+					Z = decomposer.components_ 
+
+				if models[model] == 'Deconvol_normalized':
+					print 'Deconvol_normalized'
+					decomposer = Deconvol_normalized(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					decomposer.fit(X)
+					W = decomposer.transform(X)
+					Z = decomposer.components_ 
+
+				if models[model] == 'DIFI_strict_top5':
+					print 'DIFI_strict_top5'
+					decomposer = DIFI_strict_top5(n_components=k, rand_inits=n_rand_inits, tol=1e-1)
+					decomposer.fit(X, fractions)
+					W = decomposer.transform(X, fractions)
+					Z = decomposer.components_ 
+
+				if models[model] == 'negative_control':
+					print 'negative_control'
+					W = np.zeros((len(X), k))
+					Z = np.zeros((k,len(X[0])))
+
+				if models[model] == 'negative_control2':
+					print 'negative_control2'
+					W = np.array([[1./k]*k]*len(X))
+					Z = np.array([[np.mean(X.T[gene]) for gene in range(len(X[0]))]]*k)
+
+				if models[model] == 'DIFI_deviate_top5':
+					print 'DIFI_deviate_top5'
+					decomposer = DIFI_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=1e-1)
+					decomposer.fit(X, fractions)
+					W = decomposer.transform(X, fractions)
+					Z = decomposer.components_ 
+
+				if models[model] == 'DIFI_nmf_deviate_top5':
+					print 'DIFI_nmf_deviate_top5'
+					decomposer = DIFI_nmf_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					decomposer.fit(X, fractions)
+					W = decomposer.transform(X, fractions)
+					Z = decomposer.components_ 
+
+
+				#scale W for each sample so that sum = 1
+				# for i in range(len(W)):
+				# 	W[i] = W[i]/sum(W[i])
+
+				# print 'Matching...'
+				#Hungarian Algorithm
+				norm_matrix = []
+				for learned_profile in range(len(Z)):
+					this_samp = []
+					for real_profile in range(len(subpops)):
+						# this_samp.append(np.linalg.norm(Z[learned_profile] - subpops[real_profile]))
+						# print 'Learned ' + str(learned_profile) + ' ' + str(Z[learned_profile][:6])
+						# print 'Real ' + str(real_profile) + ' ' + str(subpops[real_profile][:6])
+						this_samp.append(sum(abs(Z[learned_profile] - subpops[real_profile])))
+					norm_matrix.append(this_samp)
+				# for list1 in norm_matrix:
+				# 	print str(['%.2f' % elem for elem in list1])
+				from munkres import Munkres, print_matrix
+				m = Munkres()
+				indexes = m.compute(norm_matrix)
+				indexes2 = [x[1] for x in indexes]
+				# print indexes2
+				# print_matrix(norm_matrix, msg='Lowest cost through this matrix:')
+				# total = 0
+				# for row, column in indexes:
+				# 	value = norm_matrix[row][column]
+				# 	total += value
+					# print '(%d, %d) -> %f' % (row, column, value)
+				# print 'total cost: %f' % total
+
+
+				# for learned_profile in range(len(Z)):
+				# 	for real_profile in range(len(subpops)):
+				# 		print '(%d, %d) -> %f' % (learned_profile, real_profile, norm_matrix[learned_profile][real_profile])
+
+				# print 'Fraction: ' + str(fractions[0]) + ' W ' + str(W[0])
+				# print 'Fraction: ' + str(fractions[1]) + ' W ' + str(W[1])
+
+				# W = W.T[indexes2].T
+				rearranged_fractions = fractions.T[indexes2].T
+				rearranged_profiles = subpops[indexes2]
+
+				# print 'Fraction: ' + str(rearranged_fractions[0]) + ' W ' + str(W[0])
+				# print 'Fraction: ' + str(rearranged_fractions[1]) + ' W ' + str(W[1])
+
+				# print 'real frac ' + str(rearranged_fractions[0]) 
+				# print 'W[0] ' + str(W[0])
+				# print 'real frac ' + str(rearranged_fractions[1]) 
+				# print 'W[1] ' + str(W[1])
+
+				W_error = sum(sum(abs(rearranged_fractions - W)))
+				Z_error = sum(sum(abs(rearranged_profiles - Z))) / sum(sum(abs(rearranged_profiles)))
+
+				# print 'sum of W ' + str(sum(sum(abs(rearranged_fractions))))
+				# print 'sum of Z ' + str(sum(sum(abs(rearranged_profiles))))
+
+				W_L1_error[model].append(W_error)
+				Z_L1_error[model].append(Z_error)
+
+				print 'W Error = ' + str(W_error)
+				print 'Z Error = ' + str(Z_error)
+
+				print
+
+		results_W.append(W_L1_error)
+		results_Z.append(Z_L1_error)
+
+	#average the results
+	#results is a list of lists (one for each iter)
+	#each list has a list for each model
+	#each list has an entry for the errors at some noise
+	W_L1_error_avg = [[] for x in models]
+	Z_L1_error_avg = [[] for x in models]
+
+	#so for each model, get average error
+	for mod in range(len(models)):
+		for noi in range(len(noise_amount)):
+
+			noises_for_each_iter_W = []
+			noises_for_each_iter_Z = []
+			for ite in range(average_over_x_iters):
+
+				noises_for_each_iter_W.append(results_W[ite][mod][noi])
+				noises_for_each_iter_Z.append(results_Z[ite][mod][noi])
+
+			W_L1_error_avg[mod].append(np.mean(noises_for_each_iter_W))
+			Z_L1_error_avg[mod].append(np.mean(noises_for_each_iter_Z))
 
 
 	#plot the errors
-	print noise_amount
+	plt.figure(1)
+
+	ax = plt.subplot(211)
+	# plt.subplot(211)
 	for model in range(len(models)):
-
-		print W_L1_error[model]
-
-		plt.plot(noise_amount, W_L1_error[model], label=models[model])
-
-
+		# print W_L1_error[model]
+		plt.plot(noise_amount, W_L1_error_avg[model], label=models[model])
 	plt.xlabel('Noise')
-	plt.ylabel('Fraction Error')
-	plt.legend()
+	plt.ylabel('Fraction (W) Error')
 
-	plt.savefig('error_with_noise2.png')
+
+	# Shrink current axis by 20%
+	box = ax.get_position()
+	ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+	ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size':8})
+
+
+	# plt.legend(prop={'size':8}, loc=1)
+
+	ax = plt.subplot(212)
+	for model in range(len(models)):
+		# print Z_L1_error[model]
+		plt.plot(noise_amount, Z_L1_error_avg[model], label=models[model])
+	plt.ylabel('Basis (Z) Error')
+	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters))
+
+
+
+	# Shrink current axis by 20%
+	box = ax.get_position()
+	ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+	ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size':8})
+	# plt.legend(prop={'size':8}, loc=1)
+
+
+	plt.savefig('Performances_with_noise_oct8_2.png')
 	print 'Saved plot'
 
+
+
+
+# ax = plt.subplot(211)
+# for i in xrange(5):
+#     ax.plot(x, i * x, label='$y = %ix$'%i)
+
+# # Shrink current axis by 20%
+# box = ax.get_position()
+# ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+
+# # Put a legend to the right of the current axis
+# ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
 
 
