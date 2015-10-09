@@ -29,26 +29,31 @@ from deconvol_model import DIFI_strict_top5
 from deconvol_model import DIFI_deviate_top5
 from deconvol_model import DIFI_nmf_deviate_top5
 
+from perturb_fractions import distribute_evenly
 
 
 
 
 if __name__ == "__main__":
 
-	models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5']
+	models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5', 'DIFI_off_by_25', 'DIFI_off_by_50', 'DIFI_off_by_100']
+	# models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5', 'DIFI_off_by_50', 'DIFI_off_by_75', 'DIFI_off_by_100']
 	# models = ['Deconvol_normalized', 'DIFI_strict_top5', 'DIFI_deviate_top5', 'negative_control', 'negative_control2',]
 	# models = ['DIFI_strict', 'DIFI_w_deviates', 'Deconvol_normalized', 'DIFI_strict_top5', 'negative_control']
 	# models = ['nmf', 'nnls', 'DIFI_strict', 'DIFI_w_deviates']
 	# models = ['']
-	k = 20
+	k = 5
 	n_rand_inits =1
+	n_samps = 20
+	p_of_zero=.7
+	tol=1e-1
+	lambda1 = 300
 
-
-	noise_amount = [0.0, .2, .4, .6, .8, 1.]
-	# noise_amount = [0.0, .5, 1.]
+	# noise_amount = [0.0, .2, .4, .6, .8, 1.]
+	noise_amount = [0.0, .5, 1.]
 	# noise_amount = [0.0, 1.]
 
-	average_over_x_iters = 10
+	average_over_x_iters = 1
 
 
 	W_L1_error = [[] for x in models]
@@ -63,9 +68,6 @@ if __name__ == "__main__":
 			print 'Noise ' + str(noise1)
 			#Make data
 			print 'Making data...'
-			n_samps = 40
-			p_of_zero=.7
-			tol=1e-1
 			subpops, fractions, X = mrsd.make_and_return(n_subpops=k, n_samps=n_samps, probability_of_zero=p_of_zero, noise=noise1)
 			# print 'X ' + str(X[0][:10])
 			# print 'subpops ' + str(subpops[0][:10])
@@ -204,6 +206,47 @@ if __name__ == "__main__":
 					W = decomposer.transform(X, fractions)
 					Z = decomposer.components_ 
 
+				if models[model] == 'DIFI_off_by_10':
+					print 'DIFI_off_by_10'
+					decomposer = DIFI_nmf_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					off_by_10 = distribute_evenly(fractions, .1)
+					decomposer.fit(X, off_by_10)
+					W = decomposer.transform(X, off_by_10)
+					Z = decomposer.components_ 
+
+
+				if models[model] == 'DIFI_off_by_25':
+					print 'DIFI_off_by_25'
+					decomposer = DIFI_nmf_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					off_by_10 = distribute_evenly(fractions, .25)
+					decomposer.fit(X, off_by_10)
+					W = decomposer.transform(X, off_by_10)
+					Z = decomposer.components_ 
+
+
+				if models[model] == 'DIFI_off_by_50':
+					print 'DIFI_off_by_50'
+					decomposer = DIFI_nmf_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					off_by_10 = distribute_evenly(fractions, .5)
+					decomposer.fit(X, off_by_10)
+					W = decomposer.transform(X, off_by_10)
+					Z = decomposer.components_ 
+
+				if models[model] == 'DIFI_off_by_75':
+					print 'DIFI_off_by_75'
+					decomposer = DIFI_nmf_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					off_by_10 = distribute_evenly(fractions, .75)
+					decomposer.fit(X, off_by_10)
+					W = decomposer.transform(X, off_by_10)
+					Z = decomposer.components_ 
+
+				if models[model] == 'DIFI_off_by_100':
+					print 'DIFI_off_by_100'
+					decomposer = DIFI_nmf_deviate_top5(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					off_by_10 = distribute_evenly(fractions, 1.)
+					decomposer.fit(X, off_by_10)
+					W = decomposer.transform(X, off_by_10)
+					Z = decomposer.components_ 
 
 				#scale W for each sample so that sum = 1
 				# for i in range(len(W)):
@@ -319,7 +362,7 @@ if __name__ == "__main__":
 		# print Z_L1_error[model]
 		plt.plot(noise_amount, Z_L1_error_avg[model], label=models[model])
 	plt.ylabel('Basis (Z) Error')
-	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters))
+	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters) + ' | lambda= ' + str(lambda1))
 
 
 
@@ -330,7 +373,7 @@ if __name__ == "__main__":
 	# plt.legend(prop={'size':8}, loc=1)
 
 
-	plt.savefig('Performances_with_noise_oct8_2.png')
+	plt.savefig('Performances_with_noise_oct8_4.png')
 	print 'Saved plot'
 
 

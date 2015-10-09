@@ -77,7 +77,7 @@ def regression_with_prior(X, W, Z):
 
 	#allow W to deviate
 	W_new = []
-	lambda1 = 1.
+	lambda1 = 300.
 	ZZT = np.dot(Z, Z.T)
 	denominator = pinv(lambda1*np.identity(len(Z)) + ZZT)
 	for samp in range(len(X)):
@@ -1134,24 +1134,41 @@ class DIFI_nmf_deviate_top5():
 					break
 
 			print 'Step 2'
+			print 'new norm ' + str(new_norm)
+			print 'W before starting '
+			print W[0]
 			#Optimize model using the known frequencies
 			#Can start Z where the NMF ended
 			converged = 0
 			norm = -1
 			new_norm = -1
+			last_norm = -1
 			for iter1 in range(self.max_iter):
 
 				#Optimize W
 				W = assign_W_to_top_5_components(X, freqs, Z)
+				print 'after assignment'
+				print W[0]
 				W = use_all_components(X, W, Z)
+				print 'after use all'
+				print W[0]
 				W = regression_with_prior(X, W, Z)
-
+				print 'after regression'
+				print W[0]
 				#scale W for each sample so that sum = 1
 				for i in range(len(W)):
 					W[i] = W[i]/sum(W[i])
+				print 'after scale'
+				print W[0]
 
 				norm = np.linalg.norm(X - np.dot(W, Z))
-				# print 'norm ' + str(norm)
+				print 'norm ' + str(norm)
+
+				if norm > last_norm and last_norm != -1:
+					print 'done ' + str(iter1)
+					converged = 1
+					break
+				last_norm = norm
 
 				#Optimize Z
 				Z = []
@@ -1161,8 +1178,11 @@ class DIFI_nmf_deviate_top5():
 				Z = np.array(Z).T
 
 				new_norm = np.linalg.norm(X - np.dot(W, Z))
-				# print 'new_norm ' + str(new_norm)
+				print 'new_norm ' + str(new_norm)
 
+				if new_norm < best_norm or best_norm == -1:
+					best_norm = new_norm
+					best_components = Z
 
 				if (norm - new_norm) < self.tol:
 					print '# iters until optimized= ' + str(iter1)
@@ -1172,9 +1192,7 @@ class DIFI_nmf_deviate_top5():
 			if converged == 0:
 				print 'Did not converge. Went to ' + str(self.max_iter) + ' iterations'
 
-			if new_norm < best_norm or best_norm == -1:
-				best_norm = new_norm
-				best_components = Z
+
 
 
 		# self.W = W
@@ -1200,10 +1218,19 @@ class DIFI_nmf_deviate_top5():
 		Z = self.components_
 		W = assign_W_to_top_5_components(X, freqs, Z)
 		W = use_all_components(X, W, Z)
+
+		print 'before'
+		print W[0]
+
 		W = regression_with_prior(X, W, Z)
+
+
 		#scale W for each sample so that sum = 1
 		for i in range(len(W)):
 			W[i] = W[i]/sum(W[i])
+
+		print 'after'
+		print W[0]
 
 		return W
 
