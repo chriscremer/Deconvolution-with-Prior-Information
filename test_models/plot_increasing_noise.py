@@ -28,6 +28,10 @@ from deconvol_model import Deconvol_normalized
 from deconvol_model import DIFI_strict_top5
 from deconvol_model import DIFI_deviate_top5
 from deconvol_model import DIFI_nmf_deviate_top5
+from deconvol_model import DIFI_nmf_deviate_matchW
+from deconvol_model import DIFI_nmf_top5_nmf
+from deconvol_model import DIFI_match_dev_optZ
+
 
 from perturb_fractions import distribute_evenly
 
@@ -36,24 +40,29 @@ from perturb_fractions import distribute_evenly
 
 if __name__ == "__main__":
 
-	models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5', 'DIFI_off_by_25', 'DIFI_off_by_50', 'DIFI_off_by_100']
+	# models = ['DIFI_match_dev_optZ']
+	models = ['Deconvol_normalized', 'DIFI_match_dev_optZ', 'DIFI_match_dev_optZ_off_by_25', 'DIFI_match_dev_optZ_off_by_100']
+	# models = ['Deconvol_normalized', 'DIFI_nmf_deviate_matchW', 'Difi_ndm_off_by_25', 'Difi_ndm_off_by_50', 'Difi_ndm_off_by_100']
+	# models = ['Deconvol_normalized', 'DIFI_nmf_deviate_matchW', 'DIFI_nmf_top5_nmf']
+	# models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5', 'DIFI_off_by_25', 'DIFI_off_by_50', 'DIFI_off_by_100']
 	# models = ['Deconvol_normalized', 'DIFI_nmf_deviate_top5', 'DIFI_off_by_50', 'DIFI_off_by_75', 'DIFI_off_by_100']
 	# models = ['Deconvol_normalized', 'DIFI_strict_top5', 'DIFI_deviate_top5', 'negative_control', 'negative_control2',]
 	# models = ['DIFI_strict', 'DIFI_w_deviates', 'Deconvol_normalized', 'DIFI_strict_top5', 'negative_control']
 	# models = ['nmf', 'nnls', 'DIFI_strict', 'DIFI_w_deviates']
 	# models = ['']
-	k = 5
+	k = 20
 	n_rand_inits =1
-	n_samps = 20
+	n_samps = 40
 	p_of_zero=.7
 	tol=1e-1
-	lambda1 = 300
+	average_over_x_iters = 10
+	
 
-	# noise_amount = [0.0, .2, .4, .6, .8, 1.]
-	noise_amount = [0.0, .5, 1.]
+	noise_amount = [0.0, .2, .4, .6, .8, 1.]
+	# noise_amount = [0., .5, 1.]
 	# noise_amount = [0.0, 1.]
 
-	average_over_x_iters = 1
+	
 
 
 	W_L1_error = [[] for x in models]
@@ -69,6 +78,7 @@ if __name__ == "__main__":
 			#Make data
 			print 'Making data...'
 			subpops, fractions, X = mrsd.make_and_return(n_subpops=k, n_samps=n_samps, probability_of_zero=p_of_zero, noise=noise1)
+			# print 'fractions shape ' + str(fractions.shape)
 			# print 'X ' + str(X[0][:10])
 			# print 'subpops ' + str(subpops[0][:10])
 			# print 'fractions ' + str(fractions[0])
@@ -106,6 +116,24 @@ if __name__ == "__main__":
 			X = X.T[back_in_order].T
 			subpops = subpops.T[back_in_order].T
 			print X.shape
+			# print 'fractions[0] ' + str(fractions[0])
+
+			#remove 0s from fractions
+			cleaned_fractions = []
+			for samp in range(len(fractions)):
+				frac_list = []
+				for ji in range(len(fractions[samp])):
+					if fractions[samp][ji] > 0:
+						frac_list.append(fractions[samp][ji])
+				cleaned_fractions.append(frac_list)
+
+			# print cleaned_fractions[0]
+			print
+
+			
+
+
+
 			# print 'X ' + str(X[0][:10])
 			# print 'subpops ' + str(subpops[0][:10])
 
@@ -248,6 +276,70 @@ if __name__ == "__main__":
 					W = decomposer.transform(X, off_by_10)
 					Z = decomposer.components_ 
 
+				if models[model] == 'DIFI_nmf_deviate_matchW':
+					print 'DIFI_nmf_deviate_matchW'
+					decomposer = DIFI_nmf_deviate_matchW(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					# off_by_10 = distribute_evenly(fractions, 1.)
+					decomposer.fit(X, cleaned_fractions)
+					W = decomposer.W
+					Z = decomposer.Z
+					# W = decomposer.transform(X, off_by_10)
+					# Z = decomposer.components_ 
+
+				if models[model] == 'Difi_ndm_off_by_25':
+					print 'Difi_ndm_off_by_25'
+					decomposer = DIFI_nmf_deviate_matchW(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					decomposer.fit(X, distribute_evenly(cleaned_fractions, .25)) 
+					W = decomposer.W
+					Z = decomposer.Z
+
+				if models[model] == 'Difi_ndm_off_by_50':
+					print 'Difi_ndm_off_by_50'
+					decomposer = DIFI_nmf_deviate_matchW(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					decomposer.fit(X, distribute_evenly(cleaned_fractions, .5)) 
+					W = decomposer.W
+					Z = decomposer.Z
+
+				if models[model] == 'Difi_ndm_off_by_100':
+					print 'Difi_ndm_off_by_100'
+					decomposer = DIFI_nmf_deviate_matchW(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					decomposer.fit(X, distribute_evenly(cleaned_fractions, 1.)) 
+					W = decomposer.W
+					Z = decomposer.Z
+
+				if models[model] == 'DIFI_nmf_top5_nmf':
+					print 'DIFI_nmf_top5_nmf'
+					decomposer = DIFI_nmf_top5_nmf(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					# off_by_10 = distribute_evenly(fractions, 1.)
+					decomposer.fit(X, cleaned_fractions)
+					W = decomposer.W
+					Z = decomposer.Z
+
+
+				if models[model] == 'DIFI_match_dev_optZ':
+					print 'DIFI_match_dev_optZ'
+					decomposer = DIFI_match_dev_optZ(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					# off_by_10 = distribute_evenly(fractions, 1.)
+					decomposer.fit(X, cleaned_fractions)
+					W = decomposer.W
+					Z = decomposer.Z
+
+				if models[model] == 'DIFI_match_dev_optZ_off_by_25':
+					print 'DIFI_match_dev_optZ_off_by_25'
+					decomposer = DIFI_match_dev_optZ(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					# off_by_10 = distribute_evenly(fractions, 1.)
+					decomposer.fit(X, distribute_evenly(cleaned_fractions, .25))
+					W = decomposer.W
+					Z = decomposer.Z
+
+				if models[model] == 'DIFI_match_dev_optZ_off_by_100':
+					print 'DIFI_match_dev_optZ_off_by_100'
+					decomposer = DIFI_match_dev_optZ(n_components=k, rand_inits=n_rand_inits, tol=tol)
+					# off_by_10 = distribute_evenly(fractions, 1.)
+					decomposer.fit(X, distribute_evenly(cleaned_fractions, 1.))
+					W = decomposer.W
+					Z = decomposer.Z
+
 				#scale W for each sample so that sum = 1
 				# for i in range(len(W)):
 				# 	W[i] = W[i]/sum(W[i])
@@ -362,7 +454,7 @@ if __name__ == "__main__":
 		# print Z_L1_error[model]
 		plt.plot(noise_amount, Z_L1_error_avg[model], label=models[model])
 	plt.ylabel('Basis (Z) Error')
-	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters) + ' | lambda= ' + str(lambda1))
+	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters) + ' | lambda= ' + str(len(X[0])))
 
 
 
@@ -373,7 +465,7 @@ if __name__ == "__main__":
 	# plt.legend(prop={'size':8}, loc=1)
 
 
-	plt.savefig('Performances_with_noise_oct8_4.png')
+	plt.savefig('Performances_with_noise_oct15_4.png')
 	print 'Saved plot'
 
 
