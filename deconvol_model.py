@@ -12,6 +12,8 @@ from scipy.optimize import nnls
 import itertools
 from numpy.linalg import pinv
 
+from nnls import nnls_with_prior
+
 def init_Z(X, n_components):
 
 	#Initialize Z
@@ -77,7 +79,7 @@ def regression_with_prior(X, W, Z):
 
 	#allow W to deviate
 	W_new = []
-	lambda1 = 300.
+	lambda1 = len(X[0])
 	ZZT = np.dot(Z, Z.T)
 	denominator = pinv(lambda1*np.identity(len(Z)) + ZZT)
 	for samp in range(len(X)):
@@ -176,6 +178,136 @@ def optimize_z_using_nnls(X, W):
 	Z = np.array(Z).T
 
 	return Z
+
+
+def optimize_z_and_w_using_nnls_given_X_and_Z(X, Z, max_iters, tol):
+
+	converged = 0
+	for iter1 in range(max_iters):
+
+		#Optimize W
+		W = []
+		for i in range(len(X)):
+			W_i = nnls(Z.T, X[i])[0]
+			W.append(W_i)
+		W = np.array(W)
+
+		W = use_all_components(X, W, Z)
+
+		#scale W for each sample so that sum = 1
+		for i in range(len(W)):
+			W[i] = W[i]/sum(W[i])
+
+		norm = np.linalg.norm(X - np.dot(W, Z))
+		# print 'norm ' + str(norm)
+
+		#Optimize Z
+		Z = []
+		for d in range(len(X.T)):
+			Z_d = nnls(W, X.T[d])[0]
+			Z.append(Z_d)
+		Z = np.array(Z).T
+
+		new_norm = np.linalg.norm(X - np.dot(W, Z))
+		# print 'new_norm ' + str(new_norm)
+
+		if (norm - new_norm) < tol:
+			# print '# iters until optimized= ' + str(iter1)
+			converged = 1
+			break
+
+	if converged == 0:
+		print 'Did not converge1'
+
+	return W, Z
+
+
+def optimize_z_and_w_using_nnls_given_X_and_W(X, W, max_iters, tol):
+
+	converged = 0
+	for iter1 in range(max_iters):
+
+		#Optimize Z
+		Z = []
+		for d in range(len(X.T)):
+			Z_d = nnls(W, X.T[d])[0]
+			Z.append(Z_d)
+		Z = np.array(Z).T
+
+		new_norm = np.linalg.norm(X - np.dot(W, Z))
+		# print 'new_norm ' + str(new_norm)
+
+		#Optimize W
+		W = []
+		for i in range(len(X)):
+			W_i = nnls(Z.T, X[i])[0]
+			W.append(W_i)
+		W = np.array(W)
+
+		W = use_all_components(X, W, Z)
+
+		#scale W for each sample so that sum = 1
+		for i in range(len(W)):
+			W[i] = W[i]/sum(W[i])
+
+		norm = np.linalg.norm(X - np.dot(W, Z))
+		# print 'norm ' + str(norm)
+
+		if (new_norm - norm) < tol:
+			# print '# iters until optimized= ' + str(iter1)
+			converged = 1
+			break
+
+	if converged == 0:
+		print 'Did not converge2'
+
+	return W, Z
+
+
+def fit_prior_freqs(W, freqs):
+
+
+	#TODO
+	#match the Ws
+
+	new_W = []
+	for samp in range(len(W)):
+		norm_matrix = []
+		for freq in range(len(freqs[samp])):
+			this_samp = []
+			for w in range(len(W[samp])):
+				this_samp.append(abs(freqs[samp][freq] - W[samp][w]))
+			norm_matrix.append(this_samp)
+		# for list1 in norm_matrix:
+		# 	print str(['%.2f' % elem for elem in list1])
+		from munkres import Munkres, print_matrix
+		m = Munkres()
+		indexes = m.compute(norm_matrix)
+		indexes2 = [x[1] for x in indexes]
+
+		new_W_i = [0]*len(W[samp])
+		for i in range(len(indexes2)):
+			new_W_i[indexes2[i]] = freqs[samp][i]
+		new_W.append(new_W_i)
+
+	W = np.array(new_W)
+
+	return W
+
+
+def nnls_with_prior_for_each_samp(X,W,Z,lambda1):
+
+	W_new = []
+	for i in range(len(X)):
+		# print i
+		# print W[i]
+		W_i = nnls_with_prior(Z.T,X[i],W[i],lambda1)
+		W_new.append(W_i)
+		# print W_i
+	W = np.array(W_new)
+
+	return W
+
 
 class Deconvol():
 	"""
@@ -1056,8 +1188,6 @@ class DIFI_deviate_top5():
 
 
 
-
-
 class DIFI_nmf_deviate_top5():
 	"""
 	Deconvolution Incorporating Frequency Information (Difi)
@@ -1133,8 +1263,8 @@ class DIFI_nmf_deviate_top5():
 					converged = 1
 					break
 
-			print 'Step 2'
 			print 'new norm ' + str(new_norm)
+			print 'Step 2'
 			print 'W before starting '
 			print W[0]
 			#Optimize model using the known frequencies
@@ -1149,20 +1279,24 @@ class DIFI_nmf_deviate_top5():
 				W = assign_W_to_top_5_components(X, freqs, Z)
 				print 'after assignment'
 				print W[0]
+				print 'norm ' + str(np.linalg.norm(X - np.dot(W, Z)))				
 				W = use_all_components(X, W, Z)
 				print 'after use all'
 				print W[0]
+				print 'norm ' + str(np.linalg.norm(X - np.dot(W, Z)))
 				W = regression_with_prior(X, W, Z)
 				print 'after regression'
 				print W[0]
+				print 'norm ' + str(np.linalg.norm(X - np.dot(W, Z)))
 				#scale W for each sample so that sum = 1
 				for i in range(len(W)):
 					W[i] = W[i]/sum(W[i])
 				print 'after scale'
 				print W[0]
+				print 'norm ' + str(np.linalg.norm(X - np.dot(W, Z)))
 
-				norm = np.linalg.norm(X - np.dot(W, Z))
-				print 'norm ' + str(norm)
+				# norm = np.linalg.norm(X - np.dot(W, Z))
+				# print 'norm ' + str(norm)
 
 				if norm > last_norm and last_norm != -1:
 					print 'done ' + str(iter1)
@@ -1233,5 +1367,309 @@ class DIFI_nmf_deviate_top5():
 		print W[0]
 
 		return W
+
+
+
+
+class DIFI_nmf_deviate_matchW():
+	"""
+	Deconvolution Incorporating Frequency Information (Difi)
+	A simple linear model with latent variables.
+	"""
+
+
+	def __init__(self, n_components=3, tol=1e-3, max_iter=200, rand_inits=1):
+		self.n_components = n_components
+		self.tol = tol
+		self.max_iter = max_iter
+		self.rand_inits = rand_inits
+		self.components_ = None
+		self.norm = None
+		self.W = None
+		self.Z = None
+
+
+	def fit(self, X, freqs):
+		"""
+		Fit the DIFI model to X
+
+		Parameters
+		----------
+		X : array-like, shape (n_samples, n_features)
+			Training data.
+
+		Returns
+		-------
+		self
+		"""
+
+		best_norm = -1
+		best_components = -1
+		for inits in range(self.rand_inits):
+			# print 'Rand Init ' + str(inits)
+
+			#Initialize Z
+			Z = init_Z(X, self.n_components)
+
+			#Optimize model with alternating NNLS
+			W, Z = optimize_z_and_w_using_nnls_given_X_and_Z(X, Z, self.max_iter, self.tol)
+
+			#Inject freq data by fitting it to W
+			W = fit_prior_freqs(W, freqs)
+
+			#Optimize model with alternating NNLS
+			# W, Z = optimize_z_and_w_using_nnls_given_X_and_W(X, W, self.max_iter, self.tol)
+
+			#Inject freq data by fitting it to W
+			# W = fit_prior_freqs(W, freqs)
+
+			#Optimize model with alternating NNLS
+			# W, Z = optimize_z_and_w_using_nnls_given_X_and_W(X, W, self.max_iter, self.tol)
+
+
+			#Allow to deviate
+			# W = regression_with_prior(X, W, Z)
+
+
+			#Optimize Z
+			Z = optimize_z_using_nnls(X, W)
+
+
+		self.W = W
+		self.Z = Z
+
+		return self
+
+
+	def transform(self, X, freqs):
+		"""Solve for W given Z and X
+
+		Parameters
+		----------
+		X : array-like, shape (n_samples, n_features)
+
+		Returns
+		-------
+		X_new : array-like, shape (n_samples, n_components)
+			The latent variables of X.
+		"""
+
+		print 'This needs to be implemented'
+
+		return None
+
+
+
+
+class DIFI_nmf_top5_nmf():
+	"""
+	Deconvolution Incorporating Frequency Information (Difi)
+	A simple linear model with latent variables.
+	"""
+
+
+	def __init__(self, n_components=3, tol=1e-3, max_iter=200, rand_inits=1):
+		self.n_components = n_components
+		self.tol = tol
+		self.max_iter = max_iter
+		self.rand_inits = rand_inits
+		self.components_ = None
+		self.norm = None
+		self.W = None
+		self.Z = None
+
+
+	def fit(self, X, freqs):
+		"""
+		Fit the DIFI model to X
+
+		Parameters
+		----------
+		X : array-like, shape (n_samples, n_features)
+			Training data.
+
+		Returns
+		-------
+		self
+		"""
+
+		best_norm = -1
+		best_components = -1
+		for inits in range(self.rand_inits):
+			# print 'Rand Init ' + str(inits)
+
+			#Initialize Z
+			Z = init_Z(X, self.n_components)
+
+			#Optimize model with alternating NNLS
+			W, Z = optimize_z_and_w_using_nnls_given_X_and_Z(X, Z, self.max_iter, self.tol)
+
+			#Select W using top 5
+			W = assign_W_to_top_5_components(X, freqs, Z)
+
+			#Inject freq data by fitting it to W
+			# W = fit_prior_freqs(W, freqs)
+
+			#Optimize model with alternating NNLS
+			# W, Z = optimize_z_and_w_using_nnls_given_X_and_W(X, W, self.max_iter, self.tol)
+
+			#Inject freq data by fitting it to W
+			# W = fit_prior_freqs(W, freqs)
+
+			#Optimize model with alternating NNLS
+			W, Z = optimize_z_and_w_using_nnls_given_X_and_W(X, W, self.max_iter, self.tol)
+
+
+			#Allow to deviate
+			# W = regression_with_prior(X, W, Z)
+
+
+			#Optimize Z
+			# Z = optimize_z_using_nnls(X, W)
+
+
+		self.W = W
+		self.Z = Z
+
+		return self
+
+
+	def transform(self, X, freqs):
+		"""Solve for W given Z and X
+
+		Parameters
+		----------
+		X : array-like, shape (n_samples, n_features)
+
+		Returns
+		-------
+		X_new : array-like, shape (n_samples, n_components)
+			The latent variables of X.
+		"""
+
+		print 'This needs to be implemented'
+
+		return None
+
+
+
+
+class DIFI_match_dev_optZ():
+	"""
+	Deconvolution Incorporating Frequency Information (Difi)
+	A simple linear model with latent variables.
+	"""
+
+
+	def __init__(self, n_components=3, tol=1e-3, max_iter=200, rand_inits=1):
+		self.n_components = n_components
+		self.tol = tol
+		self.max_iter = max_iter
+		self.rand_inits = rand_inits
+		self.components_ = None
+		self.norm = None
+		self.W = None
+		self.Z = None
+
+
+	def fit(self, X, freqs):
+		"""
+		Fit the DIFI model to X
+
+		Parameters
+		----------
+		X : array-like, shape (n_samples, n_features)
+			Training data.
+
+		Returns
+		-------
+		self
+		"""
+
+		best_norm = -1
+		best_components = -1
+		for inits in range(self.rand_inits):
+			# print 'Rand Init ' + str(inits)
+
+			#Initialize Z
+			Z = init_Z(X, self.n_components)
+
+			#Optimize model with alternating NNLS
+			W, Z = optimize_z_and_w_using_nnls_given_X_and_Z(X, Z, self.max_iter, self.tol)
+
+
+			#Select W using top 5
+			# W = assign_W_to_top_5_components(X, freqs, Z)
+
+			#Inject freq data by fitting it to W
+			# W = fit_prior_freqs(W, freqs)
+
+			#Optimize model with alternating NNLS
+			# W, Z = optimize_z_and_w_using_nnls_given_X_and_W(X, W, self.max_iter, self.tol)
+
+			#Optimize model with alternating NNLS
+			# W, Z = optimize_z_and_w_using_nnls_given_X_and_W(X, W, self.max_iter, self.tol)
+
+			#Allow to deviate
+			# W = regression_with_prior(X, W, Z)
+
+
+			# print np.linalg.norm(X - np.dot(W, Z))
+
+
+
+			to_beat = -1
+			for i in range(self.max_iter):
+
+				#Inject freq data by fitting it to W
+				W = fit_prior_freqs(W, freqs)
+
+				# print np.linalg.norm(X - np.dot(W, Z))
+
+				norm = np.linalg.norm(X - np.dot(W, Z))
+				if to_beat - norm < self.tol and to_beat != -1:
+					# print 'done'
+					break
+				to_beat = norm
+
+
+				#Let it deviate
+				lambda1 = len(X[0])
+				W = nnls_with_prior_for_each_samp(X,W,Z,lambda1)
+
+				# print np.linalg.norm(X - np.dot(W, Z))
+				best_W = W
+
+				#Optimize Z
+				Z = optimize_z_using_nnls(X, W)
+
+				# print np.linalg.norm(X - np.dot(W, Z))
+
+				# print
+
+
+
+		self.W = best_W
+		self.Z = Z
+
+		return self
+
+
+	def transform(self, X, freqs):
+		"""Solve for W given Z and X
+
+		Parameters
+		----------
+		X : array-like, shape (n_samples, n_features)
+
+		Returns
+		-------
+		X_new : array-like, shape (n_samples, n_components)
+			The latent variables of X.
+		"""
+
+		print 'This needs to be implemented'
+
+		return None
 
 

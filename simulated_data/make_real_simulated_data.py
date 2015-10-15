@@ -1,6 +1,7 @@
 
 
 
+
 import numpy as np
 import random
 import os
@@ -90,14 +91,20 @@ def make_samps(subpops, fractions, noise):
 
 	gene_variance = [np.std(x) for x in X.T]
 
+	# print X[0][:10]
+
 	noise_matrix = []
 	for samp in X:
+		# samp_noise = [random.random()*noise*std*2. for std in gene_variance]
 		samp_noise = [random.random()*noise*std for std in gene_variance]
+
 		noise_matrix.append(samp_noise)
 
 	noise_matrix = np.array(noise_matrix)
 
 	X = X + noise_matrix
+
+	# print X[0][:10]
 
 	return X
 
@@ -133,8 +140,8 @@ if __name__ == "__main__":
 	fractions = subpop_fractions(n_samps, n_subpops, probability_of_zero)
 	X = make_samps(subpops, fractions, noise)
 
-	print subpops.shape
-	print fractions.shape
-	print X.shape
+	# print subpops.shape
+	# print fractions.shape
+	# print X.shape
 
 
