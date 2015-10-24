@@ -5,6 +5,7 @@
 import numpy as np
 import random
 import os
+import math as m
 
 
 
@@ -89,22 +90,63 @@ def make_samps(subpops, fractions, noise):
 	#noise 1 is change by a full standard deviation
 	#noise between 0 and 1 is intermediate
 
+	'''
+	#type 1 noise
 	gene_variance = [np.std(x) for x in X.T]
-
 	# print X[0][:10]
-
+	
 	noise_matrix = []
 	for samp in X:
 		# samp_noise = [random.random()*noise*std*2. for std in gene_variance]
 		samp_noise = [random.random()*noise*std for std in gene_variance]
 
 		noise_matrix.append(samp_noise)
-
 	noise_matrix = np.array(noise_matrix)
-
 	X = X + noise_matrix
+	'''
 
-	# print X[0][:10]
+	'''
+	additive noise
+	'''
+	gene_variance = [np.std(x) for x in X.T]
+	for i in range(len(X)):
+		for j in range(len(X[i])):
+
+
+	
+	
+
+	#multiplicative noise
+	# print np.log(0)
+	# print np.std(np.log(0))
+	# fafsd
+
+	# std_log_gene = [np.std(np.log(x)) for x in X.T[:100]]
+	#since i cant take log of zero
+
+	# std_gene = [np.std(x) for x in X.T[:100]]
+	# log_std_gene = []
+	# for i in range(len(std_gene)):
+	# 	if std_gene[i] == 0:
+	# 		log_std_gene.append(0.)
+	# 	else:
+	# 		log_std_gene.append(np.log(std_gene[i]))
+
+
+	'''
+	#This is cibersort noise
+	global_std = np.std(X)
+	log_glocal_std = np.log(global_std)
+
+	for i in range(len(X)):
+		for j in range(len(X.T)):
+
+			# print X[i][j]
+			X[i][j] = X[i][j] + m.exp(np.random.normal(0, (noise*log_glocal_std)))
+			# print X[i][j]
+			# print
+	'''
+
 
 	return X
 

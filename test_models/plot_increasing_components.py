@@ -50,19 +50,24 @@ if __name__ == "__main__":
 	# models = ['DIFI_strict', 'DIFI_w_deviates', 'Deconvol_normalized', 'DIFI_strict_top5', 'negative_control']
 	# models = ['nmf', 'nnls', 'DIFI_strict', 'DIFI_w_deviates']
 	# models = ['']
-	k = 10
+
+	# k = 20
+	noise1 = .5
 	n_rand_inits =1
-	n_samps = 40
+	n_samps = 80
 	p_of_zero=.7
 	tol=1e-1
 	average_over_x_iters = 3
 	
 
-	noise_amount = [0.0, .2, .4, .6, .8, 1.]
+	# noise_amount = [0.0, .2, .4, .6, .8, 1.]
 	# noise_amount = [0., .5, 1.]
 	# noise_amount = [0.0, 1.]
 
-	
+	# n_k = [10, 25, 40, 55, 70, 85]
+	# n_k = [10, 20, 30, 40]
+
+	x_axis = [10, 20, 30]
 
 
 	W_L1_error = [[] for x in models]
@@ -72,9 +77,11 @@ if __name__ == "__main__":
 
 	for iter_to_avg in range(average_over_x_iters):
 
-		for noise1 in noise_amount:
+		# for noise1 in noise_amount:
+		for k in x_axis:
 			print '\n\n\nIter ' + str(iter_to_avg)
-			print 'Noise ' + str(noise1)
+			# print 'Noise ' + str(noise1)
+			print 'k= ' + str(k)
 			#Make data
 			print 'Making data...'
 			subpops, fractions, X = mrsd.make_and_return(n_subpops=k, n_samps=n_samps, probability_of_zero=p_of_zero, noise=noise1)
@@ -111,7 +118,7 @@ if __name__ == "__main__":
 			#largest to smallest
 			sorted_indexes = np.argsort(genes_var_exps)[::-1]
 			#keep top 75%
-			sorted_indexes = sorted_indexes[:len(sorted_indexes)*.5]
+			sorted_indexes = sorted_indexes[:len(sorted_indexes)*.03]
 			back_in_order = sorted(sorted_indexes)
 			X = X.T[back_in_order].T
 			subpops = subpops.T[back_in_order].T
@@ -416,7 +423,7 @@ if __name__ == "__main__":
 
 	#so for each model, get average error
 	for mod in range(len(models)):
-		for noi in range(len(noise_amount)):
+		for noi in range(len(x_axis)):
 
 			noises_for_each_iter_W = []
 			noises_for_each_iter_Z = []
@@ -436,8 +443,8 @@ if __name__ == "__main__":
 	# plt.subplot(211)
 	for model in range(len(models)):
 		# print W_L1_error[model]
-		plt.plot(noise_amount, W_L1_error_avg[model], label=models[model])
-	plt.xlabel('Noise')
+		plt.plot(x_axis, W_L1_error_avg[model], label=models[model])
+	plt.xlabel('Number of Components')
 	plt.ylabel('Fraction (W) Error')
 
 
@@ -452,7 +459,7 @@ if __name__ == "__main__":
 	ax = plt.subplot(212)
 	for model in range(len(models)):
 		# print Z_L1_error[model]
-		plt.plot(noise_amount, Z_L1_error_avg[model], label=models[model])
+		plt.plot(x_axis, Z_L1_error_avg[model], label=models[model])
 	plt.ylabel('Basis (Z) Error')
 	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters) + ' | lambda= ' + str(len(X[0])))
 
@@ -465,7 +472,7 @@ if __name__ == "__main__":
 	# plt.legend(prop={'size':8}, loc=1)
 
 
-	plt.savefig('Performances_with_noise_oct15_4.png')
+	plt.savefig('Performances_with_comps_oct15_1.png')
 	print 'Saved plot'
 
 

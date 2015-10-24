@@ -1646,6 +1646,8 @@ class DIFI_match_dev_optZ():
 				# print np.linalg.norm(X - np.dot(W, Z))
 
 				# print
+				if i == (self.max_iter - 1):
+					print 'max reached!!'
 
 
 
@@ -1673,3 +1675,32 @@ class DIFI_match_dev_optZ():
 		return None
 
 
+
+class ALternate_NNLS():
+
+	def __init__(self, n_components=3, tol=1e-3, max_iter=200, rand_inits=1, lambda1=None):
+		self.n_components = n_components
+		self.tol = tol
+		self.max_iter = max_iter
+		self.rand_inits = rand_inits
+		self.components_ = None
+		self.norm = None
+		self.W = None
+		self.Z = None
+
+	def fit(self, X):
+
+		#Initialize Z
+		Z = init_Z(X, self.n_components)
+
+		#Optimize model with alternating NNLS
+		W, Z = optimize_z_and_w_using_nnls_given_X_and_Z(X, Z, self.max_iter, self.tol)
+
+		#scale W for each sample so that sum = 1
+		for i in range(len(W)):
+			W[i] = W[i]/sum(W[i])
+
+		self.W = W
+		self.Z = Z
+
+		return self

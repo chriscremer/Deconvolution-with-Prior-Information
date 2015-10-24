@@ -24,13 +24,49 @@ def distribute_evenly(fractions, amount):
 	return new_freqs
 
 
+def add_noise(fractions, amount):
+	'''
+	Add some noise
+	'''
+	if amount == 0.:
+		return fractions
 
-#test
+	new_freqs = []
+	for samp in fractions:
+		new_samp = []
+		for freq in samp:
+			# new_freq = freq + np.random.normal(0,amount)
+			new_freq = freq + (np.random.normal(0,1.)*amount)
+			#no negatives
+			if new_freq < 0:
+				new_freq = 0.001
+			new_samp.append(new_freq)
+		#sum to 1
+		# print new_samp
+		# print new_samp[0]
+		# print sum(new_samp[i])
+		for i in range(len(new_samp)):
+			# print i
+			new_samp[i] = new_samp[i]/sum(new_samp)
 
-# freqs = [[.7, .2, .1],
-# 			[1.],
-# 			[.5, .5]]
+		new_freqs.append(new_samp)
 
-# print freqs
+	return new_freqs
 
-# print distribute_evenly(freqs, .1)
+
+
+
+# #test
+# if __name__ == "__main__":
+# 	freqs = [[.7, .2, .1],
+# 				[1.],
+# 				[.5, .5]]
+
+# 	print freqs
+
+# 	# print distribute_evenly(freqs, .1)
+
+# 	aaa =  add_noise(freqs, 0.5)
+
+# 	for i in aaa:
+# 		print i

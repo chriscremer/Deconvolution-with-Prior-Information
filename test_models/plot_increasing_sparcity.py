@@ -52,15 +52,15 @@ if __name__ == "__main__":
 	# models = ['']
 	k = 10
 	n_rand_inits =1
-	n_samps = 40
-	p_of_zero=.7
+	n_samps = 30
+	# p_of_zero=.7
 	tol=1e-1
-	average_over_x_iters = 3
-	
+	average_over_x_iters = 1
+	noise1 = .5
 
-	noise_amount = [0.0, .2, .4, .6, .8, 1.]
-	# noise_amount = [0., .5, 1.]
-	# noise_amount = [0.0, 1.]
+	variables = [.1, .3, .5, .7, .9]
+	# variables = [0., .5, 1.]
+	# variables = [0.0, 1.]
 
 	
 
@@ -72,9 +72,10 @@ if __name__ == "__main__":
 
 	for iter_to_avg in range(average_over_x_iters):
 
-		for noise1 in noise_amount:
+		for var in variables:
+			p_of_zero = var
 			print '\n\n\nIter ' + str(iter_to_avg)
-			print 'Noise ' + str(noise1)
+			print 'var ' + str(var)
 			#Make data
 			print 'Making data...'
 			subpops, fractions, X = mrsd.make_and_return(n_subpops=k, n_samps=n_samps, probability_of_zero=p_of_zero, noise=noise1)
@@ -111,7 +112,7 @@ if __name__ == "__main__":
 			#largest to smallest
 			sorted_indexes = np.argsort(genes_var_exps)[::-1]
 			#keep top 75%
-			sorted_indexes = sorted_indexes[:len(sorted_indexes)*.5]
+			sorted_indexes = sorted_indexes[:len(sorted_indexes)*.03]
 			back_in_order = sorted(sorted_indexes)
 			X = X.T[back_in_order].T
 			subpops = subpops.T[back_in_order].T
@@ -390,7 +391,7 @@ if __name__ == "__main__":
 				# print 'real frac ' + str(rearranged_fractions[1]) 
 				# print 'W[1] ' + str(W[1])
 
-				W_error = sum(sum(abs(rearranged_fractions - W)))
+				W_error = sum(sum(abs(rearranged_fractions - W))) / var
 				Z_error = sum(sum(abs(rearranged_profiles - Z))) / sum(sum(abs(rearranged_profiles)))
 
 				# print 'sum of W ' + str(sum(sum(abs(rearranged_fractions))))
@@ -416,7 +417,7 @@ if __name__ == "__main__":
 
 	#so for each model, get average error
 	for mod in range(len(models)):
-		for noi in range(len(noise_amount)):
+		for noi in range(len(variables)):
 
 			noises_for_each_iter_W = []
 			noises_for_each_iter_Z = []
@@ -436,15 +437,16 @@ if __name__ == "__main__":
 	# plt.subplot(211)
 	for model in range(len(models)):
 		# print W_L1_error[model]
-		plt.plot(noise_amount, W_L1_error_avg[model], label=models[model])
-	plt.xlabel('Noise')
-	plt.ylabel('Fraction (W) Error')
+		plt.plot(variables, W_L1_error_avg[model], label=models[model])
+	plt.xlabel('Sparsity')
+	plt.ylabel('|Wp - Wr| Per Sample')
 
 
 	# Shrink current axis by 20%
 	box = ax.get_position()
 	ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 	ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size':8})
+	plt.xlim( .1, .9 )  
 
 
 	# plt.legend(prop={'size':8}, loc=1)
@@ -452,9 +454,9 @@ if __name__ == "__main__":
 	ax = plt.subplot(212)
 	for model in range(len(models)):
 		# print Z_L1_error[model]
-		plt.plot(noise_amount, Z_L1_error_avg[model], label=models[model])
-	plt.ylabel('Basis (Z) Error')
-	plt.xlabel('k=' + str(k) + ' | n_samps= ' + str(n_samps) + ' | p_zero= ' + str(p_of_zero) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters) + ' | lambda= ' + str(len(X[0])))
+		plt.plot(variables, Z_L1_error_avg[model], label=models[model])
+	plt.ylabel('|Zp - Zr| / |Zr|')
+	plt.xlabel('k=' + str(k) + ' | noise= ' + str(noise1) + ' | n_samps= ' + str(n_samps) + ' | tol= ' + str(tol) + ' | iters= ' + str(average_over_x_iters) + ' | lambda= ' + str(len(X[0])))
 
 
 
@@ -462,10 +464,11 @@ if __name__ == "__main__":
 	box = ax.get_position()
 	ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
 	ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size':8})
+	plt.xlim( .1, .9 )  
 	# plt.legend(prop={'size':8}, loc=1)
 
 
-	plt.savefig('Performances_with_noise_oct15_4.png')
+	plt.savefig('Performances_with_sparsity_oct16_1.png')
 	print 'Saved plot'
 
 
