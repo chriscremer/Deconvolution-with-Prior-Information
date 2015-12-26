@@ -3,7 +3,7 @@
 
 
 import numpy as np
-
+import math
 
 
 
@@ -36,7 +36,7 @@ def add_noise(fractions, amount):
 		new_samp = []
 		for freq in samp:
 			# new_freq = freq + np.random.normal(0,amount)
-			new_freq = freq + (np.random.normal(0,1.)*amount)
+			new_freq = freq + (np.random.normal(0,amount**2))
 			#no negatives
 			if new_freq < 0:
 				new_freq = 0.001

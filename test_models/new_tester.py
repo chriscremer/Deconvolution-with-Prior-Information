@@ -13,10 +13,13 @@ sys.path.insert(0, home+'/plotting')
 import make_real_simulated_data as mrsd
 import nice_plot
 from perturb_fractions import distribute_evenly
+from calc_error import match_W_error
+from calc_error import match_Z_error
 
 from sklearn.decomposition import NMF
 from deconvol_model import ALternate_NNLS
 from difi_model import Difi
+from difi_model2 import Difi2
 
 def preprocess(X, subpops):
 
@@ -74,24 +77,26 @@ def preprocess(X, subpops):
 if __name__ == "__main__":
 
 
-	models = ['NMF', 'Difi', 'Difi_uniform']
+	# models = ['NMF', 'Difi', 'Difi2']
+	models = ['Difi2']
 
 	#Data Parameters
 	n_samps = 50
-	n_comps = 5
-	p_of_zero=.7
-	noise1 = .7
+	n_comps = 30
+	p_of_zero=.5
+	noise1 = .5
 
 	#Model Parameters
 	n_rand_inits = 1
-	tol=1e-2
+	tol=.001
 	lambda1 = None
 
 	#Testing Parameters
-	average_over_x_iters = 5
+	average_over_x_iters = 10
 
 	#Variable to test
-	x_values = [0.01,.2,.4,.6,.8,.99]
+	x_values = [.7]
+	# x_values = [0.01,.2,.4,.6,.8,.99]
 	# x_values = [1000,1,10000]
 
 	#Recording results
@@ -154,29 +159,27 @@ if __name__ == "__main__":
 					W = decomposer.W
 					Z = decomposer.Z
 
+				if models[model] == 'Difi2':
+					print models[model]
+					decomposer = Difi2(n_components=n_comps, tol=tol, lambda1=None)
+					decomposer.fit(X, cleaned_proportions)
+					W = decomposer.W
+					Z = decomposer.Z
 
-				#Hungarian Algorithm to match predicted to real Zi
-				norm_matrix = []
-				for learned_profile in range(len(Z)):
-					this_samp = []
-					for real_profile in range(len(subpops)):
-						# this_samp.append(sum(abs(Z[learned_profile] - subpops[real_profile])))
-						this_samp.append(np.linalg.norm(Z[learned_profile] - subpops[real_profile]))
-					norm_matrix.append(this_samp)
-				from munkres import Munkres, print_matrix
-				m = Munkres()
-				indexes = m.compute(norm_matrix)
-				indexes2 = [x[1] for x in indexes]
+				dsafs
 
-				rearranged_fractions = fractions.T[indexes2].T
-				rearranged_profiles = subpops[indexes2]
+				# W_error, Z_error = match_Z_error(W, Z, fractions, subpops)
+
+				W_error, Z_error = match_W_error(W, Z, fractions, subpops)
+
+
 
 
 				#Calculate error
 				# W_error = sum(sum(abs(rearranged_fractions - W)))
 				# Z_error = sum(sum(abs(rearranged_profiles - Z))) / sum(sum(abs(rearranged_profiles)))
-				W_error = np.linalg.norm(rearranged_fractions - W)
-				Z_error = np.linalg.norm(rearranged_profiles - Z) / np.linalg.norm(rearranged_profiles)
+
+
 				print 'W Error = ' + str(W_error)
 				print 'Z Error = ' + str(Z_error)
 				print
@@ -223,6 +226,6 @@ if __name__ == "__main__":
 	# nice_plot.plot_lines_2graphs_errorbars(x_values, W_error_avg, W_error_std, models, 'Regularization Strength', 'W Reconstruction Error', 'na', 1, 0)
 	# nice_plot.plot_lines_2graphs_errorbars(x_values, Z_error_avg, Z_error_std, models, 'Regularization Strength', 'Z Reconstruction Error', 'noise_plot.png', 0, 1)
 
-	nice_plot.plot_lines_2graphs_errorbars2(x_values, W_error_avg, W_error_std, models, 'Noise', 'W Reconstruction Error', 'na', 1, 0)
-	nice_plot.plot_lines_2graphs_errorbars2(x_values, Z_error_avg, Z_error_std, models, 'Noise', 'Z Reconstruction Error', 'noise_plot.png', 0, 1)
+	nice_plot.plot_lines_2graphs_errorbars2(x_values, W_error_avg, W_error_std, models, 'Sample Noise', 'W Reconstruction Error', 'na', 1, 0)
+	nice_plot.plot_lines_2graphs_errorbars2(x_values, Z_error_avg, Z_error_std, models, 'Sample Noise', 'Z Reconstruction Error', 'noise_plot.png', 0, 1)
 

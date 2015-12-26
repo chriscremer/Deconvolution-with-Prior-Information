@@ -110,9 +110,15 @@ def make_samps(subpops, fractions, noise):
 	'''
 	gene_variance = [np.std(x) for x in X.T]
 	for i in range(len(X)):
+		
+		# print amount
+		# print np.random.normal(0,gene_variance)
 		for j in range(len(X[i])):
-
-
+			if gene_variance[j] <= 0:
+				continue
+			X[i][j] = X[i][j] + (np.random.normal(0,gene_variance[j])*noise)
+			if X[i][j] < 0:
+				X[i][j] = 0.
 	
 	
 

@@ -14,10 +14,13 @@ import make_real_simulated_data as mrsd
 import nice_plot
 from perturb_fractions import distribute_evenly
 from calc_error import match_W_error
+from calc_error import match_Z_error
 
 from sklearn.decomposition import NMF
 from deconvol_model import ALternate_NNLS
 from difi_model import Difi
+
+from difi_model_cvxopt import Abs_Error_Abs_Reg
 
 def preprocess(X, subpops):
 
@@ -75,7 +78,7 @@ def preprocess(X, subpops):
 if __name__ == "__main__":
 
 
-	models = ['NMF', 'Difi', 'Difi_uniform']
+	models = ['NMF', 'LP']
 
 	#Data Parameters
 	n_samps = 50
@@ -92,10 +95,8 @@ if __name__ == "__main__":
 	average_over_x_iters = 10
 
 	#Variable to test
-	# x_values = [0.01,.2,.4,.6,.8,.99]
+	x_values = [0.01,.2,.4,.6,.8,.99]
 	# x_values = [1000,1,10000]
-	# x_values = [.8, .6, .4, .2] 
-	x_values = [.9, .7, .5, .3, .1]
 
 	#Recording results
 	this_iter_results_W = []
@@ -111,7 +112,7 @@ if __name__ == "__main__":
 			print '\n\n\nIter ' + str(iter_to_avg)
 			print 'Var ' + str(var) 
 			print 'Making data...'
-			subpops, fractions, X = mrsd.make_and_return(n_subpops=n_comps, n_samps=n_samps, probability_of_zero=var, noise=noise1)
+			subpops, fractions, X = mrsd.make_and_return(n_subpops=n_comps, n_samps=n_samps, probability_of_zero=p_of_zero, noise=var)
 			
 			#Remove 0s from proportions
 			cleaned_proportions = []
@@ -143,6 +144,13 @@ if __name__ == "__main__":
 					W = decomposer.W
 					Z = decomposer.Z
 
+				if models[model] == 'LP':
+					print models[model]
+					decomposer = Abs_Error_Abs_Reg(n_components=n_comps, tol=tol)
+					decomposer.fit(X)
+					W = decomposer.W
+					Z = decomposer.Z
+
 				if models[model] == 'Difi':
 					print models[model]
 					decomposer = Difi(n_components=n_comps, tol=tol, lambda1=None)
@@ -158,7 +166,18 @@ if __name__ == "__main__":
 					Z = decomposer.Z
 
 
+
+				# W_error, Z_error = match_Z_error(W, Z, fractions, subpops)
+
 				W_error, Z_error = match_W_error(W, Z, fractions, subpops)
+
+
+
+
+				#Calculate error
+				# W_error = sum(sum(abs(rearranged_fractions - W)))
+				# Z_error = sum(sum(abs(rearranged_profiles - Z))) / sum(sum(abs(rearranged_profiles)))
+
 
 				print 'W Error = ' + str(W_error)
 				print 'Z Error = ' + str(Z_error)
@@ -206,12 +225,6 @@ if __name__ == "__main__":
 	# nice_plot.plot_lines_2graphs_errorbars(x_values, W_error_avg, W_error_std, models, 'Regularization Strength', 'W Reconstruction Error', 'na', 1, 0)
 	# nice_plot.plot_lines_2graphs_errorbars(x_values, Z_error_avg, Z_error_std, models, 'Regularization Strength', 'Z Reconstruction Error', 'noise_plot.png', 0, 1)
 
-
-	x_values = [1-x for x in x_values]
-
-	# nice_plot.plot_lines_2graphs_errorbars2(x_values, W_error_avg, W_error_std, models, 'Sample Heterogeneity', 'W Reconstruction Error', 'na', 1, 0)
-	# nice_plot.plot_lines_2graphs_errorbars2(x_values, Z_error_avg, Z_error_std, models, 'Sample Heterogeneity', 'Z Reconstruction Error', 'sparse_plot.png', 0, 1)
-
-	nice_plot.plot_lines_2graphs_errorbars3(x_values, W_error_avg, W_error_std, models, 'Sample Heterogeneity', 'W Reconstruction Error', 'na', 1, 0, xlim=[.1,.91])
-	nice_plot.plot_lines_2graphs_errorbars3(x_values, Z_error_avg, Z_error_std, models, 'Sample Heterogeneity', 'Z Reconstruction Error', 'sparse_plot.png', 0, 1, xlim=[.1,.91])
+	nice_plot.plot_lines_2graphs_errorbars2(x_values, W_error_avg, W_error_std, models, 'Sample Noise', 'W Reconstruction Error', 'na', 1, 0)
+	nice_plot.plot_lines_2graphs_errorbars2(x_values, Z_error_avg, Z_error_std, models, 'Sample Noise', 'Z Reconstruction Error', 'noise_plot.png', 0, 1)
 

@@ -13,6 +13,7 @@ sys.path.insert(0, home+'/plotting')
 import make_real_simulated_data as mrsd
 import nice_plot
 from perturb_fractions import distribute_evenly
+from calc_error import match_W_error
 
 from sklearn.decomposition import NMF
 from deconvol_model import ALternate_NNLS
@@ -81,7 +82,7 @@ if __name__ == "__main__":
 	#Data Parameters
 	n_samps = 50
 	n_comps = 5
-	p_of_zero=.7
+	p_of_zero=.5
 	noise1 = .5
 
 	#Model Parameters
@@ -157,28 +158,8 @@ if __name__ == "__main__":
 					Z = decomposer.Z
 
 
-				#Hungarian Algorithm to match predicted to real Zi
-				norm_matrix = []
-				for learned_profile in range(len(Z)):
-					this_samp = []
-					for real_profile in range(len(subpops)):
-						# this_samp.append(sum(abs(Z[learned_profile] - subpops[real_profile])))
-						this_samp.append(np.linalg.norm(Z[learned_profile] - subpops[real_profile]))
-					norm_matrix.append(this_samp)
-				from munkres import Munkres, print_matrix
-				m = Munkres()
-				indexes = m.compute(norm_matrix)
-				indexes2 = [x[1] for x in indexes]
+				W_error, Z_error = match_W_error(W, Z, fractions, subpops)
 
-				rearranged_fractions = fractions.T[indexes2].T
-				rearranged_profiles = subpops[indexes2]
-
-
-				#Calculate error
-				# W_error = sum(sum(abs(rearranged_fractions - W)))
-				# Z_error = sum(sum(abs(rearranged_profiles - Z))) / sum(sum(abs(rearranged_profiles)))
-				W_error = np.linalg.norm(rearranged_fractions - W)
-				Z_error = np.linalg.norm(rearranged_profiles - Z) / np.linalg.norm(rearranged_profiles)
 				print 'W Error = ' + str(W_error)
 				print 'Z Error = ' + str(Z_error)
 				print

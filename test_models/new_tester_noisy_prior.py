@@ -13,6 +13,7 @@ sys.path.insert(0, home+'/plotting')
 import make_real_simulated_data as mrsd
 import nice_plot
 from perturb_fractions import add_noise
+from calc_error import match_W_error
 
 from sklearn.decomposition import NMF
 from deconvol_model import ALternate_NNLS
@@ -79,8 +80,8 @@ if __name__ == "__main__":
 	#Data Parameters
 	n_samps = 50
 	n_comps = 5
-	p_of_zero=.7
-	noise1 = .7
+	p_of_zero=.5
+	noise1 = .5
 
 	#Model Parameters
 	n_rand_inits = 1
@@ -88,12 +89,13 @@ if __name__ == "__main__":
 	lambda1 = None
 
 	#Testing Parameters
-	average_over_x_iters = 10
+	average_over_x_iters = 20
 
 	#Variable to test
 	# x_values = [0.01,.2,.4,.6,.8,.99]
 	# x_values = [1000,1,10000]
 	x_values = [0., .2, .4, .6, .8, 1.]
+	# x_values = [0., .1, .2, .3, .4, .5]
 
 	#Recording results
 	this_iter_results_W = []
@@ -157,27 +159,33 @@ if __name__ == "__main__":
 
 
 				#Hungarian Algorithm to match predicted to real Zi
-				norm_matrix = []
-				for learned_profile in range(len(Z)):
-					this_samp = []
-					for real_profile in range(len(subpops)):
-						# this_samp.append(sum(abs(Z[learned_profile] - subpops[real_profile])))
-						this_samp.append(np.linalg.norm(Z[learned_profile] - subpops[real_profile]))
-					norm_matrix.append(this_samp)
-				from munkres import Munkres, print_matrix
-				m = Munkres()
-				indexes = m.compute(norm_matrix)
-				indexes2 = [x[1] for x in indexes]
+				
+				# norm_matrix = []
+				# for learned_profile in range(len(Z)):
+				# 	this_samp = []
+				# 	for real_profile in range(len(subpops)):
+				# 		# this_samp.append(sum(abs(Z[learned_profile] - subpops[real_profile])))
+				# 		this_samp.append(np.linalg.norm(Z[learned_profile] - subpops[real_profile]))
+				# 	norm_matrix.append(this_samp)
+				# from munkres import Munkres, print_matrix
+				# m = Munkres()
+				# indexes = m.compute(norm_matrix)
+				# indexes2 = [x[1] for x in indexes]
 
-				rearranged_fractions = fractions.T[indexes2].T
-				rearranged_profiles = subpops[indexes2]
+				# rearranged_fractions = fractions.T[indexes2].T
+				# rearranged_profiles = subpops[indexes2]
+
+				# W_error = np.linalg.norm(rearranged_fractions - W)
+				# Z_error = np.linalg.norm(rearranged_profiles - Z) / np.linalg.norm(rearranged_profiles)
+				
+				
+
+				W_error, Z_error = match_W_error(W, Z, fractions, subpops)
 
 
 				#Calculate error
 				# W_error = sum(sum(abs(rearranged_fractions - W)))
 				# Z_error = sum(sum(abs(rearranged_profiles - Z))) / sum(sum(abs(rearranged_profiles)))
-				W_error = np.linalg.norm(rearranged_fractions - W)
-				Z_error = np.linalg.norm(rearranged_profiles - Z) / np.linalg.norm(rearranged_profiles)
 				print 'W Error = ' + str(W_error)
 				print 'Z Error = ' + str(Z_error)
 				print
