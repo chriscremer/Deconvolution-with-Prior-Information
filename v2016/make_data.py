@@ -2,13 +2,19 @@
 import numpy as np
 import random
 import os
+from os.path import expanduser
+home = expanduser("~")
 import math as m
 
 '''
 Simulated Data Maker
 
 
-Call run_and_return with params: ...
+Call run_and_return with params:
+	n_subpops, 
+	n_samps, 
+	probability_of_zero, 
+	noise
 
 
 It will take k breast cancer samples and mix them based on their proportions
@@ -27,7 +33,7 @@ def make_subpopulations(n_subpops):
 	Select the first x breast samples
 	'''
 
-	directory = '../../../TCGA_data/BRCA_rest/RNASeqV2/UNC__IlluminaHiSeq_RNASeqV2/Level_3/'
+	directory = home + '/TCGA_data/BRCA_rest/RNASeqV2/UNC__IlluminaHiSeq_RNASeqV2/Level_3/'
 
 	count = 0
 	subpops = []
@@ -95,31 +101,17 @@ def subpop_fractions(n_samps, n_subpops ,probability_of_zero):
 
 def make_samps(subpops, fractions, noise):
 
+
 	X = np.dot(fractions, subpops)
 
-	#noise is added based on the variance of the gene
-	#noise 0 is nothing changed
-	#noise 1 is change by a full standard deviation
-	#noise between 0 and 1 is intermediate
+
+
+
+
 
 	'''
-	#type 1 noise
-	gene_variance = [np.std(x) for x in X.T]
-	# print X[0][:10]
-	
-	noise_matrix = []
-	for samp in X:
-		# samp_noise = [random.random()*noise*std*2. for std in gene_variance]
-		samp_noise = [random.random()*noise*std for std in gene_variance]
+	# additive noise
 
-		noise_matrix.append(samp_noise)
-	noise_matrix = np.array(noise_matrix)
-	X = X + noise_matrix
-	'''
-
-	'''
-	additive noise
-	'''
 	gene_variance = [np.std(x) for x in X.T]
 	for i in range(len(X)):
 		
@@ -131,28 +123,14 @@ def make_samps(subpops, fractions, noise):
 			X[i][j] = X[i][j] + (np.random.normal(0,gene_variance[j])*noise)
 			if X[i][j] < 0:
 				X[i][j] = 0.
-	
-	
-
-	#multiplicative noise
-	# print np.log(0)
-	# print np.std(np.log(0))
-	# fafsd
-
-	# std_log_gene = [np.std(np.log(x)) for x in X.T[:100]]
-	#since i cant take log of zero
-
-	# std_gene = [np.std(x) for x in X.T[:100]]
-	# log_std_gene = []
-	# for i in range(len(std_gene)):
-	# 	if std_gene[i] == 0:
-	# 		log_std_gene.append(0.)
-	# 	else:
-	# 		log_std_gene.append(np.log(std_gene[i]))
-
-
 	'''
-	#This is cibersort noise
+	
+	
+
+
+	
+	#This is multiplicative noise
+	#cibersort does this
 	global_std = np.std(X)
 	log_glocal_std = np.log(global_std)
 
@@ -163,7 +141,7 @@ def make_samps(subpops, fractions, noise):
 			X[i][j] = X[i][j] + m.exp(np.random.normal(0, (noise*log_glocal_std)))
 			# print X[i][j]
 			# print
-	'''
+	
 
 
 	return X
@@ -172,20 +150,49 @@ def make_samps(subpops, fractions, noise):
 
 def make_and_return(n_subpops, n_samps, probability_of_zero, noise):
 
-	# n_subpops = 10
-	# n_samps = 10
-	# probability_of_zero = .20
-	# noise = .5
-
 	subpops = make_subpopulations(n_subpops)
 	fractions = subpop_fractions(n_samps, n_subpops, probability_of_zero)
 	X = make_samps(subpops, fractions, noise)
 
-	print subpops.shape
-	print fractions.shape
-	print X.shape
+	return X, subpops, fractions
 
-	return subpops, fractions, X
+
+def split_fractions(fractions):
+	'''
+	Fractions will be a list of lists
+	The lists are the fractions of each sample without the zeros
+	'''
+
+	#Allow fractions to come from same subpops
+	#ie. dif DNA, but same RNA
+
+	new_fractions = []
+	for i in range(len(fractions)):
+
+		this_samp = []
+
+		#theres a 30% chance any fraction will be split in half
+
+		for j in range(len(fractions[i])):
+
+			rand = random.random()
+			if rand < .3:
+
+				half = fractions[i][j] / 2.
+				this_samp.append(half)
+				this_samp.append(half)
+
+			else:
+				this_samp.append(fractions[i][j])
+
+		new_fractions.append(this_samp)
+
+	return new_fractions
+
+
+
+
+
 
 
 
@@ -196,13 +203,11 @@ if __name__ == "__main__":
 	probability_of_zero = .20
 	noise = .5
 
-	subpops = make_subpopulations(n_subpops)
-	fractions = subpop_fractions(n_samps, n_subpops, probability_of_zero)
-	X = make_samps(subpops, fractions, noise)
+	X, subpops, fractions = make_and_return(n_subpops, n_samps, probability_of_zero, noise)
 
-	# print subpops.shape
-	# print fractions.shape
-	# print X.shape
+	print X.shape
+	print subpops.shape
+	print fractions.shape
 
 
 
