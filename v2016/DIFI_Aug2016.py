@@ -288,7 +288,7 @@ def optimize_z_using_nnls(X, W):
 
 
 
-def fit_proportions_to_W(W,proportions):
+def fit_proportions_to_W(X,W,Z,proportions):
 
 	#so if there are 3 proportions, try matching it to the top 3  in W
 	#then try all combos of 2, then match them to top 2 in W
@@ -302,57 +302,78 @@ def fit_proportions_to_W(W,proportions):
 	#if 5, 5C5 (1) , 5C4 (10),  5C3 (15), 2 (10), 451 (1) = 37
 
 	#sort the proportions
-	sorted_props = sorted(proportions)[::-1]
-	if len(sorted_props) > 3:
-		sorted_props = sorted_props[:3]
+	# sorted_props = sorted(proportions)[::-1]
 
-	sorted_props = np.array(sorted_props) / sum(sorted_props)
+
+	# sorted_props = np.array(sorted_props) / sum(sorted_props)
 
 	new_W =[]
-	for i in range(len(sorted_props)):
+	for i in range(len(proportions)):
 
-		n_subpops = len(sorted_props[i])
-		props = np.array(sorted_props[i])
+		if len(proportions[i]) > 3:
+			W_i = nnls(Z.T, X[i])[0]
+			new_W.append(W_i)
 
-		to_try = []
-		#enumerate the possible combinatioms
-		if n_subpops == 1:
-			to_try.append(props) #Combos of 1
-		if n_subpops == 2:
-			to_try.append(props) #Combos of 2
-			to_try.append([sum(props)]) #Combos of 1
-		if n_subpops == 3:
-			to_try.append(props) #Combos of 3
-			#Combos of 2
-			for j in range(n_subpops):
-				group1 = props[j]
-				group2_indexes = range(n_subpops)
-				group2_indexes.pop(j)
-				group2 = sum(props[group2_indexes])
-				to_try.append(np.array([group1, group2])) 
-			to_try.append(np.array([sum(props)])) #Combos of 1
-		# if n_subpops == 4:
-		# 	to_try.append(props) #Combos of 4
-		# 	#Combos of 2
-		# 	for j in range(n_subpops):
-		# 		group1 = props[j]
-		# 		group2_indexes = range(n_subpops)
-		# 		group2_indexes.pop(j)
-		# 		group2 = sum(props[group2_indexes])
-		# 		to_try.append(np.array([group1, group2]))
+		else:
 
+			n_subpops = len(proportions[i])
+			props = np.array(proportions[i])
 
-		# 	pairs_of_2 = list(itertools.combinations(range(4), 2))
-			# to_try.append(np.array([sum(proportions[i]])) #Combos of 1
-
-		# if n_subpops == 5:
-		# 	to_try.append(proportions[i]) #Combos of 5
-		# 	to_try.append([sum(proportions[i]])) #Combos of 1
+			to_try = []
+			#enumerate the possible combinatioms
+			if n_subpops == 1:
+				to_try.append(props) #Combos of 1
+			if n_subpops == 2:
+				to_try.append(props) #Combos of 2
+				to_try.append([sum(props)]) #Combos of 1
+			if n_subpops == 3:
+				to_try.append(props) #Combos of 3
+				#Combos of 2
+				for j in range(n_subpops):
+					group1 = props[j]
+					group2_indexes = range(n_subpops)
+					group2_indexes.pop(j)
+					group2 = sum(props[group2_indexes])
+					to_try.append(np.array([group1, group2])) 
+				to_try.append(np.array([sum(props)])) #Combos of 1
+			# if n_subpops == 4:
+			# 	to_try.append(props) #Combos of 4
+			# 	#Combos of 2
+			# 	for j in range(n_subpops):
+			# 		group1 = props[j]
+			# 		group2_indexes = range(n_subpops)
+			# 		group2_indexes.pop(j)
+			# 		group2 = sum(props[group2_indexes])
+			# 		to_try.append(np.array([group1, group2]))
 
 
-		#try them all, select the best
+			# 	pairs_of_2 = list(itertools.combinations(range(4), 2))
+				# to_try.append(np.array([sum(proportions[i]])) #Combos of 1
 
-	return to_try
+			# if n_subpops == 5:
+			# 	to_try.append(proportions[i]) #Combos of 5
+			# 	to_try.append([sum(proportions[i]])) #Combos of 1
+
+
+			#try them all, select the best
+			best_norm = -1
+			best_w = []
+			for j in range(len(to_try)):
+
+				top_indexes = np.argsort(W[i])[::-1]
+				w = np.zeros(len(W[i]))
+				for jj in range(len(to_try[j])):
+					sorted_try = sorted(to_try[j])[::-1]
+					w[top_indexes[jj]] = sorted_try[jj]
+
+				norm = np.linalg.norm(X[i] - np.dot(w, Z))
+
+				if norm < best_norm or best_norm == -1:
+					best_norm = norm
+					best_w = w
+			new_W.append(best_w)
+
+	return np.array(new_W)
 
 
 def all_combos_of_2(props):

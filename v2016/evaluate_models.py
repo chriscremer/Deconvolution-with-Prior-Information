@@ -17,11 +17,21 @@ import sparseNMF_Aug2016 as m3
 
 from sklearn.decomposition import PCA
 
-#Make data
+#Experiment settings
+tol = .001
+max_iters = 400
+
+
+#Simulated data settings
 n_subpops = 10
+n_components = n_subpops
 n_samps = 100
 probability_of_zero = .80
 noise = .1
+
+
+
+#Make data
 X, subpops, fractions = md.make_and_return(n_subpops, n_samps, probability_of_zero, noise)
 print X.shape
 print subpops.shape
@@ -53,13 +63,9 @@ fractions_split = md.split_fractions(cleaned_fractions)
 
 
 #Run models on it
-tol = .001
-max_iters = 400
-n_components = n_subpops
-
 models = [
-			# m0.DIFI(n_components=n_components, tol=tol, max_iters=max_iters),
-			m1.nsubpopsDIFI(n_components=n_components, tol=tol, max_iters=max_iters),
+			m0.DIFI(n_components=n_components, tol=tol, max_iters=max_iters),
+			# m1.nsubpopsDIFI(n_components=n_components, tol=tol, max_iters=max_iters),
 			# m2.NMF(n_components=n_components, tol=tol, max_iters=max_iters),
 			m3.sparseNMF(n_components=n_components, tol=tol, max_iters=max_iters),
 
